@@ -172,12 +172,13 @@
     <div class="dict-info" id="dictInfo"></div>
 
     <div class="controls">
-      <input class="txt" id="urlInput" type="text" value="https://brunobobby7713-svg.github.io/medical-words/medical-words.txt" placeholder="词库URL（json或txt，需支持跨域CORS，如 GitHub Pages / Gitee Pages 链接）" />
+      <input class="txt" id="urlInput" type="text" value="https://brunobobby7713-svg.github.io/medical-words/medical-words.txt" placeholder="词库文件链接：仅支持 .txt 或 .json 结尾的词库文件（如 GitHub Pages 链接），不能填小红书/公众号等网页链接" />
       <button class="ghost" id="urlLoadBtn">从链接加载</button>
       <label class="sw"><input type="checkbox" id="autoSync" checked /> 自动同步</label>
       <input class="txt" id="syncInterval" type="number" value="5" style="flex:0 0 64px" />
       <span style="color:var(--dim);font-size:12px">秒</span>
     </div>
+    <div style="font-size:12px;color:#ff8aa6;margin:-4px 0 10px;line-height:1.5">⚠️ 此框只能填<b>词库文件链接</b>（以 <b>.txt</b> 或 <b>.json</b> 结尾），不能填小红书 / 公众号 / 网页文章链接，否则无法识别。想加词请点下方「导入粘贴词库」或编辑 GitHub 词库。</div>
 
     <div class="controls">
       <button class="ghost" id="fileBtn">选择本地文件</button>
@@ -187,6 +188,21 @@
       <span id="importMsg" style="font-size:12px;color:var(--dim)"></span>
     </div>
     <div class="src" id="sourceInfo">当前词库来源：内置默认库</div>
+
+    <div style="border-top:1px dashed var(--line);margin-top:14px;padding-top:12px">
+      <div style="font-weight:600;margin-bottom:8px;color:#e6eef8">💡 全员建议加词 <span style="font-weight:400;font-size:12px;color:var(--dim)">（任何人可提交，管理员审核后合并即全员同步）</span></div>
+      <div class="controls" style="flex-wrap:wrap;gap:8px">
+        <input class="txt" id="sgWord" placeholder="要加的词，如：抗衰" style="flex:1 1 120px" />
+        <select id="sgCat" class="txt" style="flex:0 0 120px">
+          <option value="极限词">极限词</option>
+          <option value="医疗警示">医疗警示</option>
+          <option value="引流限流">引流限流</option>
+        </select>
+        <input class="txt" id="sgRepl" placeholder="替换词（可选），如：年轻化" style="flex:1 1 120px" />
+        <button class="ghost" id="sgBtn">提交建议</button>
+      </div>
+      <div id="sgMsg" style="font-size:12px;color:var(--dim);margin-top:6px"></div>
+    </div>
   </section>
 
   <section class="card">
@@ -480,6 +496,10 @@ let lastDictMsg = "";
 function setDictMsg(msg){ if(msg!==lastDictMsg){ $("importMsg").textContent = msg; lastDictMsg = msg; } }
 async function loadFromUrl(url, silent){
   if(!url){ if(!silent) $("importMsg").textContent="请先填写词库URL"; return; }
+  if(!/\.(txt|json)(\?|$)/i.test(url)){
+    if(!silent) $("importMsg").textContent="这不是词库文件链接：请填以 .txt 或 .json 结尾的词库地址，不能填小红书/公众号等网页链接";
+    return;
+  }
   try{
     const res = await fetch(url, {cache:"no-store"});
     if(!res.ok) throw new Error("HTTP "+res.status);
@@ -553,6 +573,19 @@ $("importBtn").onclick = ()=>{
   dfa=new SensitiveDFA(); dfa.build(DEFAULT_DICT.concat(list));
   refreshDictInfo(); render($("input").value);
   $("importMsg").textContent=`导入成功，新增 ${list.length} 条`;
+};
+
+$("sgBtn").onclick = ()=>{
+  const w=$("sgWord").value.trim();
+  const c=$("sgCat").value;
+  const r=$("sgRepl").value.trim();
+  if(!w){ $("sgMsg").textContent="请先填写要加的词"; return; }
+  const line = r ? w+"|"+c+"|"+r : w+"|"+c;
+  const body = "建议在词库 medical-words.txt 中添加以下敏感词：\n\n```\n"+line+"\n```\n\n- 分类："+c+"\n- 替换词："+(r||"（无）")+"\n\n请管理员审核后合并到 main 分支，全员将在 5 秒内自动同步。";
+  const url = "https://github.com/brunobobby7713-svg/medical-words/issues/new?title="+encodeURIComponent("建议加词："+w)+"&body="+encodeURIComponent(body);
+  window.open(url,"_blank");
+  $("sgMsg").textContent="已打开 GitHub 提交页 → 点绿色「Submit new issue」即可。管理员审核合并后全员自动同步。";
+  $("sgWord").value=""; $("sgRepl").value="";
 };
 
 $("benchBtn").onclick = ()=>{
