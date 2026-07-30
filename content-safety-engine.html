@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>智能内容安全检测引擎 · DFA 可视化</title>
+<style>
+  :root{
+    --bg:#0a0e17; --bg2:#0f1626; --card:rgba(20,30,48,.72);
+    --line:rgba(80,200,255,.18); --cyan:#28e0d8; --mag:#ff4d8d;
+    --amber:#ffb454; --green:#5be38b; --txt:#cdd9ec; --dim:#7c8aa5;
+    --mono:'JetBrains Mono',Consolas,'Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%,rgba(40,224,216,.10),transparent 60%),
+      radial-gradient(900px 500px at -10% 110%,rgba(255,77,141,.10),transparent 60%),
+      var(--bg);
+    color:var(--txt); min-height:100vh; padding:28px 22px 60px;
+  }
+  header{ text-align:center; margin-bottom:26px; }
+  header h1{
+    margin:0; font-size:30px; letter-spacing:1px; font-weight:800;
+    background:linear-gradient(90deg,var(--cyan),var(--mag));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 30px rgba(40,224,216,.25);
+  }
+  header p{ margin:8px 0 0; color:var(--dim); font-size:13px; letter-spacing:.5px; }
+  .tags{ margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .tag{
+    font-family:var(--mono); font-size:11px; padding:4px 10px; border-radius:20px;
+    border:1px solid var(--line); background:rgba(40,224,216,.06); color:var(--cyan);
+  }
+  .grid{ max-width:1180px; margin:0 auto; display:grid;
+    grid-template-columns:1fr 1fr; gap:18px; }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:18px; backdrop-filter:blur(8px);
+    box-shadow:0 10px 40px rgba(0,0,0,.35);
+  }
+  .card h3{ margin:0 0 14px; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px; }
+  .card h3::before{ content:''; width:4px; height:16px; border-radius:3px;
+    background:linear-gradient(var(--cyan),var(--mag)); }
+  .span2{ grid-column:1 / -1; }
+  textarea{
+    width:100%; min-height:150px; resize:vertical; border-radius:10px;
+    background:#070b13; color:var(--txt); border:1px solid var(--line);
+    padding:12px 14px; font-family:var(--mono); font-size:13px; line-height:1.7;
+    outline:none;
+  }
+  textarea:focus{ border-color:var(--cyan); box-shadow:0 0 0 3px rgba(40,224,216,.12); }
+  .controls{ display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  input.txt{ flex:1; min-width:160px; background:#070b13; color:var(--txt);
+    border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13px;
+    outline:none; font-family:var(--mono); }
+  input.txt:focus{ border-color:var(--cyan); }
+  .src{ font-family:var(--mono); font-size:12px; color:var(--cyan); margin-top:10px; }
+  button{
+    cursor:pointer; border:none; border-radius:10px; padding:10px 18px;
+    font-size:13px; font-weight:700; color:#04121a;
+    background:linear-gradient(90deg,var(--cyan),#7ef0e8);
+    transition:transform .12s, box-shadow .12s;
+  }
+  button:hover{ transform:translateY(-2px); box-shadow:0 8px 22px rgba(40,224,216,.35); }
+  button.ghost{ background:transparent; color:var(--cyan); border:1px solid var(--line); }
+  button.mag{ background:linear-gradient(90deg,var(--mag),#ff86b3); color:#1a0410; }
+  label.sw{ font-size:12px; color:var(--dim); display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .scan-wrap{ position:relative; margin-top:14px; height:8px; border-radius:6px;
+    background:#070b13; overflow:hidden; border:1px solid var(--line); }
+  .scanline{ position:absolute; top:0; left:-30%; width:30%; height:100%;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    opacity:0; }
+  .scanline.on{ opacity:1; animation:scan 1.1s linear infinite; }
+  @keyframes scan{ from{left:-30%} to{left:100%} }
+  .highlight{ min-height:150px; border-radius:10px; background:#070b13;
+    border:1px solid var(--line); padding:14px; font-size:14px; line-height:2;
+    white-space:pre-wrap; word-break:break-word; }
+  .hit{ padding:1px 5px; border-radius:5px; font-weight:700; color:#04121a;
+    background:var(--mag); box-shadow:0 0 12px rgba(255,77,141,.5); }
+  .hit.c1{ background:var(--mag); }
+  .hit.c2{ background:var(--amber); box-shadow:0 0 12px rgba(255,180,84,.5); }
+  .hit.c3{ background:var(--green); box-shadow:0 0 12px rgba(91,227,139,.5); }
+  .hit.c4{ background:var(--cyan); box-shadow:0 0 12px rgba(40,224,216,.5); }
+  .repl{ padding:2px 7px; border-radius:6px; font-weight:700; font-size:14px; color:#7df0a8; background:rgba(91,227,139,.18); border:1px solid rgba(91,227,139,.4); }
+  .repl-old{ padding:2px 5px; border-radius:6px; font-weight:600; color:var(--dim); background:rgba(255,77,141,.10); text-decoration:line-through; }
+  .arrow{ color:var(--cyan); font-weight:700; margin:0 3px; }
+  .card.hot{ border-color:rgba(91,227,139,.55); box-shadow:0 0 0 1px rgba(91,227,139,.30), 0 0 22px rgba(91,227,139,.10); }
+  .stats{ display:flex; gap:14px; margin:14px 0; flex-wrap:wrap; }
+  .stat{ flex:1; min-width:110px; background:#070b13; border:1px solid var(--line);
+    border-radius:10px; padding:12px; text-align:center; }
+  .stat b{ display:block; font-size:26px; font-family:var(--mono); color:var(--cyan); }
+  .stat span{ font-size:11px; color:var(--dim); }
+  .stat.warn b{ color:var(--mag); }
+  canvas{ display:block; margin:0 auto; }
+  .dict-info{ font-family:var(--mono); font-size:12px; color:var(--dim);
+    line-height:1.9; margin-bottom:10px; }
+  .dict-info b{ color:var(--cyan); }
+  .perf{ font-family:var(--mono); font-size:13px; line-height:2.1; }
+  .perf b{ color:var(--green); }
+  .algo p{ font-size:13px; color:var(--dim); line-height:1.8; }
+  .algo code{ font-family:var(--mono); color:var(--cyan); background:rgba(40,224,216,.08);
+    padding:1px 6px; border-radius:5px; }
+  .pill{ display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px;
+    background:rgba(255,77,141,.14); color:var(--mag); margin-left:6px; }
+  footer{ text-align:center; color:var(--dim); font-size:11px; margin-top:30px; line-height:1.8; }
+  @media(max-width:820px){ .grid{ grid-template-columns:1fr; } }
+  .brand-bar{ display:flex; align-items:center; gap:18px; background:#05080f; border:1px solid var(--line); border-radius:14px; padding:18px 24px; margin-bottom:22px; }
+  .logo{ width:52px; height:52px; border-radius:12px; background:#0a1929; border:1px solid rgba(40,224,216,.35); display:flex; align-items:center; justify-content:center; flex:0 0 52px; }
+  .logo svg{ width:30px; height:30px; }
+  .brand-text{ flex:1; }
+  .brand-text h1{ margin:0; font-size:20px; font-weight:500; letter-spacing:.5px; }
+  .brand-text p{ margin:4px 0 0; font-size:13px; color:var(--dim); }
+  .brand-status{ font-size:11px; padding:4px 10px; border-radius:20px; background:rgba(91,227,139,.12); color:var(--green); border:1px solid rgba(91,227,139,.25); white-space:nowrap; }
+  @media(max-width:680px){ .brand-bar{ flex-wrap:wrap; } .brand-status{ width:100%; text-align:center; margin-top:8px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand-bar">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none" stroke="#28e0d8" stroke-width="2">
+        <path d="M16 6v20M10 12h12M6 16h2M24 16h2" stroke-linecap="round"/>
+        <rect x="4" y="4" width="24" height="24" rx="5" stroke="#28e0d8" stroke-opacity=".5"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h1>医疗大健康 · 内容合规审核引擎</h1>
+      <p>敏感词检测 / 合规替换 / 云端实时同步 · 基于 DFA 状态机</p>
+    </div>
+    <div class="brand-status">云端词库已接入 · 5s 同步</div>
+  </div>
+  <div class="tags">
+    <span class="tag">算法 O(n)</span>
+    <span class="tag">Trie 状态机</span>
+    <span class="tag">抗干扰识别</span>
+    <span class="tag">零依赖 · 纯前端</span>
+    <span class="tag">医疗广告合规库</span>
+    <span class="tag">引流限流库</span>
+    <span class="tag">云端词库同步</span>
+  </div>
+</header>
+
+<main class="grid">
+  <section class="card">
+    <h3>待检测文本</h3>
+    <textarea id="input" placeholder="在此粘贴需要审核的文本，引擎将实时检测敏感词...">我们这款调理方案是【全网第一】的【顶级】方案，采用【祖传秘方】，能够【根治】困扰，【100%有效】且【无副作用】，是【国家级】认证的【首选】品牌。主打【抗衰】与体质调理，运用【干细胞】技术【再生】修复，【老中医】亲授，【纯天然】无依赖。想了解的姐妹，【评论区扣1】优先安排，【加微信】发你【资料】，【私聊发我】就能【免费领】专属福利，【左下角小店】有同款，【进群】还能领优惠券～</textarea>
+    <div class="controls">
+      <button id="detectBtn">开始检测</button>
+      <label class="sw"><input type="checkbox" id="realtime" checked /> 实时检测</label>
+      <label class="sw"><input type="checkbox" id="replaceMode" /> 替换词模式</label>
+      <button class="ghost" id="demoBtn">高频话术演示</button>
+      <button class="ghost" id="clearBtn">清空</button>
+    </div>
+    <div class="scan-wrap"><div class="scanline" id="scanline"></div></div>
+  </section>
+
+  <section class="card">
+    <h3>检测结果 · 高亮视图</h3>
+    <div class="stats">
+      <div class="stat warn"><b id="totalCount">0</b><span>命中敏感词</span></div>
+      <div class="stat"><b id="catCount">0</b><span>涉及分类</span></div>
+      <div class="stat"><b id="costMs">0</b><span>耗时(ms)</span></div>
+    </div>
+    <div class="highlight" id="highlight"><span style="color:var(--dim)">检测结果将在此高亮显示…</span></div>
+    <div style="margin-top:14px"><canvas id="pie" width="220" height="220"></canvas></div>
+  </section>
+
+  <section class="card span2">
+    <h3>词库管理 <span class="pill">可导入扩充 · 支持云端/本地实时更新</span></h3>
+    <div class="dict-info" id="dictInfo"></div>
+
+    <div class="controls">
+      <input class="txt" id="urlInput" type="text" value="https://brunobobby7713-svg.github.io/medical-words/medical-words.txt" placeholder="词库URL（json或txt，需支持跨域CORS，如 GitHub Pages / Gitee Pages 链接）" />
+      <button class="ghost" id="urlLoadBtn">从链接加载</button>
+      <label class="sw"><input type="checkbox" id="autoSync" checked /> 自动同步</label>
+      <input class="txt" id="syncInterval" type="number" value="5" style="flex:0 0 64px" />
+      <span style="color:var(--dim);font-size:12px">秒</span>
+    </div>
+
+    <div class="controls">
+      <button class="ghost" id="fileBtn">选择本地文件</button>
+      <input id="fileInput" type="file" accept=".txt,.json" style="display:none" />
+      <button class="ghost" id="importBtn">导入粘贴词库</button>
+      <button class="ghost" id="resetBtn">恢复默认库</button>
+      <span id="importMsg" style="font-size:12px;color:var(--dim)"></span>
+    </div>
+    <div class="src" id="sourceInfo">当前词库来源：内置默认库</div>
+  </section>
+
+  <section class="card">
+    <h3>性能压测 <span class="pill">硬核指标</span></h3>
+    <div class="perf" id="perfInfo"></div>
+    <div class="controls"><button class="mag" id="benchBtn">注入 10 万字压测</button></div>
+  </section>
+
+  <section class="card algo">
+    <h3>算法原理 · DFA / Trie 状态机</h3>
+    <svg viewBox="0 0 360 150" width="100%" height="150" style="background:#070b13;border-radius:10px;border:1px solid var(--line)">
+      <defs>
+        <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#28e0d8"/>
+        </marker>
+      </defs>
+      <circle cx="30" cy="75" r="14" fill="#13203a" stroke="#28e0d8" stroke-width="2"/>
+      <text x="30" y="79" font-size="11" fill="#28e0d8" text-anchor="middle">root</text>
+      <circle cx="110" cy="40" r="13" fill="#13203a" stroke="#ff4d8d" stroke-width="2"/>
+      <text x="110" y="44" font-size="13" fill="#ff4d8d" text-anchor="middle">最</text>
+      <circle cx="200" cy="40" r="13" fill="#13203a" stroke="#ff4d8d" stroke-width="2"/>
+      <text x="200" y="44" font-size="13" fill="#ff4d8d" text-anchor="middle">佳</text>
+      <circle cx="200" cy="40" r="18" fill="none" stroke="#ff4d8d" stroke-dasharray="3 3" opacity=".6"/>
+      <circle cx="110" cy="110" r="13" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
+      <text x="110" y="114" font-size="13" fill="#ffb454" text-anchor="middle">国</text>
+      <circle cx="200" cy="110" r="13" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
+      <text x="200" y="114" font-size="12" fill="#ffb454" text-anchor="middle">家</text>
+      <circle cx="280" cy="110" r="13" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
+      <text x="280" y="114" font-size="12" fill="#ffb454" text-anchor="middle">级</text>
+      <circle cx="280" cy="110" r="18" fill="none" stroke="#ffb454" stroke-dasharray="3 3" opacity=".6"/>
+      <line x1="44" y1="70" x2="98" y2="46" stroke="#28e0d8" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="123" y1="40" x2="187" y2="40" stroke="#ff4d8d" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="44" y1="82" x2="98" y2="105" stroke="#28e0d8" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="123" y1="110" x2="187" y2="110" stroke="#ffb454" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="213" y1="110" x2="267" y2="110" stroke="#ffb454" stroke-width="1.5" marker-end="url(#ar)"/>
+    </svg>
+    <p>引擎将敏感词构建为一棵 <code>Trie</code> 树，并在扫描文本时以 <code>O(n)</code> 线性时间完成匹配（n 为文本长度，与词库规模无关）。虚线圈标记 <code>终止状态</code>——一旦走到该节点即判定命中，支持最长匹配与抗干扰跳字（如 <code>最*佳</code> 仍可识别为 <code>最佳</code>）。</p>
+  </section>
+
+  <section class="card span2" id="replSection">
+    <h3>处置 / 替换建议 <span class="pill">勾「替换词模式」切换</span></h3>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:6px">① 打码预览（默认）：把命中词遮成 *，用于发布前风险评估</div>
+    <div class="highlight" id="maskOut" style="min-height:60px"><span style="color:var(--dim)">命中词将自动打码处置，可用于发布前的安全替换预览…</span></div>
+    <div style="margin-top:14px;font-size:12px;color:var(--dim)">② 合规替换词（勾「替换词模式」启用）：命中词自动换成词库里的合规词</div>
+    <div class="highlight" id="replaceOut" style="min-height:60px;margin-top:6px;display:none"><span style="color:var(--dim)">开启「替换词模式」后，命中词将按词库替换为合规词…</span></div>
+  </section>
+</main>
+
+<footer>
+  本工具用于内容合规与安全审核演示 · 内置词库含广告法极限词、医疗广告合规警示词、大健康引流限流词<br/>
+  政治类及其他违禁词需由使用方依法依规自行导入，引擎不提供该类词库
+</footer>
+
+<script>
+/* ============== 默认演示词库（合规：广告法极限词 + 医疗广告合规警示词） ============== */
+const DEFAULT_DICT = [
+  // 广告法极限词
+  ["最","极限词","很"],["最佳","极限词","出色"],["第一","极限词","领先"],["全网第一","极限词","行业领先"],
+  ["国家级","极限词","专业级"],["顶级","极限词","优质"],["极品","极限词","精选"],["唯一","极限词","特色"],
+  ["首选","极限词","推荐"],["王牌","极限词","主力"],["极致","极限词","深入"],["绝对","极限词","相当"],
+  ["万能","极限词","多效"],["独家","极限词","自有"],["首创","极限词","开创"],["领先","极限词","前列"],
+  ["至尊","极限词","高端"],["100%","极限词","高"],["永久","极限词","持久"],
+  // 医疗广告合规警示词（贴合大健康赛道）
+  ["祖传秘方","医疗警示","传统方"],["根治","医疗警示","调理"],["治愈","医疗警示","改善"],
+  ["药到病除","医疗警示","逐步改善"],["特效","医疗警示","特色"],["无副作用","医疗警示","耐受良好"],
+  ["100%有效","医疗警示","高接受度"],["保证痊愈","医疗警示","有助恢复"],["彻底治愈","医疗警示","改善"],
+  ["一针见效","医疗警示","逐步见效"],["神效","医疗警示","良好体感"],["立竿见影","医疗警示","逐步改善"],
+  ["永不复发","医疗警示","少反复"],["绝对安全","医疗警示","安全"],["治愈率","医疗警示","改善比例"],
+  // 大健康平台引流 / 营销限流词（发布前自查，避免触发平台限流违规）
+  ["私域","引流限流","社群"],["微信","引流限流","站内"],["加微信","引流限流","联系我们"],["薇信","引流限流","站内"],
+  ["vx","引流限流","站内"],["评论区","引流限流","讨论区"],["后台","引流限流","站内"],["主页","引流限流","主页"],
+  ["私聊","引流限流","联系"],["扫码","引流限流","了解"],["二维码","引流限流","资料"],["领取","引流限流","获取"],
+  ["免费送","引流限流","福利"],["送福利","引流限流","有礼"],["扣1","引流限流","咨询"],["扣2","引流限流","咨询"],
+  ["福利","引流限流","好礼"],["资料","引流限流","内容"],["课程","引流限流","内容"],["培训","引流限流","内容"],
+  ["下单","引流限流","选购"],["抢购","引流限流","选购"],["限时","引流限流","特期"],["优惠","引流限流","活动"],
+  ["折扣","引流限流","让利"],["抗衰","引流限流","年轻化"],["抗衰老","引流限流","抗老化护理"],["逆龄","引流限流","年轻化"],
+  ["干细胞","引流限流","营养支持"],["排毒","引流限流","清润"],["祛湿","引流限流","温润"],["祛斑","引流限流","淡印"],
+  ["美白","引流限流","亮肤"],["丰胸","引流限流","塑形"],["减肥","引流限流","体重管理"],["降糖","引流限流","平稳血糖"],
+  ["降压","引流限流","平稳血压"],["治疗","引流限流","调理"],["疗效","引流限流","体感"],["消炎","引流限流","舒缓"],
+  ["杀菌","引流限流","洁净"],["修复","引流限流","养护"],["再生","引流限流","焕新"],
+  // —— 补充：医疗大健康深度词库（2026-07-30 扩充）——
+  // 极限词补充
+  ["销量第一","极限词","销量领先"],["行业第一","极限词","行业领先"],["第一品牌","极限词","知名品牌"],["领导者","极限词","领先者"],
+  ["领航者","极限词","先行者"],["开创者","极限词","深耕者"],["王者","极限词","主力"],["鼻祖","极限词","早期"],
+  ["终身","极限词","长期"],["顶级专家","极限词","资深专家"],["销量冠军","极限词","销量靠前"],["保证有效","极限词","有助"],
+  // 医疗警示补充（功效宣称 / 违禁背书）
+  ["抗癌","医疗警示","健康养护"],["防癌","医疗警示","健康养护"],["中药治癌","医疗警示","健康养护"],["抗炎","医疗警示","舒缓"],
+  ["抗病毒","医疗警示","防护"],["调理根治","医疗警示","调理"],["替代药物","医疗警示","辅助"],["停掉药物","医疗警示","遵医嘱调整"],
+  ["不用吃药","医疗警示","遵医嘱"],["老中医","医疗警示","中医师"],["神医","医疗警示","医师"],["奇效","医疗警示","良好体感"],
+  ["见效快","医疗警示","逐步见效"],["不复发","医疗警示","少反复"],["断根","医疗警示","改善"],["告别","医疗警示","缓解"],
+  ["宫廷","医疗警示","古法"],["御用","医疗警示","古法"],["皇室","医疗警示","传统"],["苗医","医疗警示","民族医学"],
+  ["藏医","医疗警示","传统医学"],["蒙医神药","医疗警示","传统方"],["包治百病","医疗警示","辅助调理"],["包治","医疗警示","辅助"],
+  ["纯天然","医疗警示","天然来源"],["无依赖","医疗警示","温和"],["助眠","医疗警示","舒眠"],["壮阳","医疗警示","活力支持"],
+  ["益智","医疗警示","专注支持"],["增高","医疗警示","骨骼营养"],["生发","医疗警示","养发"],["降糖","医疗警示","平稳血糖"],
+  // 引流限流补充（导流 / 促销 / 违规话术）
+  ["免费领","引流限流","领取"],["秒杀","引流限流","特惠"],["优惠券","引流限流","活动券"],["粉丝群","引流限流","社群"],
+  ["进群","引流限流","加入"],["转发","引流限流","分享"],["私信","引流限流","站内信"],["加我","引流限流","联系"],
+  ["领取资料","引流限流","获取内容"],["点击下方","引流限流","查看"],["链接购买","引流限流","选购"],["小店","引流限流","店铺"],
+  ["左下角","引流限流","主页"]
+];
+
+/* ============== 归一化（等长映射，位置可一一对应） ============== */
+const FAN2JIAN = {
+  "網":"网","國":"国","極":"极","頂":"顶","術":"术","來":"来","時":"时","會":"会",
+  "這":"这","個":"个","稱":"称","對":"对","實":"实","點":"点","關":"关","開":"开",
+  "東":"东","車":"车","馬":"马","華":"华","員":"员","變":"变","體":"体","電":"电",
+  "腦":"脑","選":"选","擇":"择","長":"长","後":"后","處":"处","學":"学","監":"监",
+  "測":"测","標":"标","準":"准","違":"违","禁":"禁","詞":"词","療":"疗","藥":"药",
+  "醫":"医","產":"产","師":"师","專":"专","傢":"家","優":"优","異":"异","狀":"状",
+  "況":"况","內":"内","則":"则","總":"总","結":"结","構":"构","號":"号","規":"规",
+  "劃":"划","報":"报","導":"导","際":"际","願":"愿","強":"强","勢":"势","創":"创",
+  "業":"业","動":"动","應":"应","環":"环","節":"节","證":"证","認":"认","質":"质"
+};
+function normalize(text){
+  let out = "";
+  for(const ch of text){
+    const code = ch.charCodeAt(0);
+    if(code>=0xFF01 && code<=0xFF5E){ out += String.fromCharCode(code-0xFEE0); continue; }
+    if(ch>='A' && ch<='Z'){ out += ch.toLowerCase(); continue; }
+    if(FAN2JIAN[ch]){ out += FAN2JIAN[ch]; continue; }
+    out += ch;
+  }
+  return out;
+}
+function isNoise(ch){
+  const c = ch.charCodeAt(0);
+  const isCJK = c>=0x4E00 && c<=0x9FFF;
+  const isAZ = (c>=65&&c<=90)||(c>=97&&c<=122);
+  const isNum = c>=48&&c<=57;
+  return !(isCJK||isAZ||isNum);
+}
+
+/* ============== DFA 引擎 ============== */
+class SensitiveDFA{
+  constructor(){ this.root={}; this.size=0; this.cats={}; }
+  addWord(word,cat,repl){
+    if(!word) return;
+    cat = cat||"未分类"; repl = repl||"";
+    let node=this.root;
+    for(const ch of word){
+      if(!node[ch]) node[ch]={};
+      node=node[ch];
+    }
+    if(node._end && node._end.length){
+      const old = node._end[0];
+      if(old.cat!==cat){
+        this.cats[old.cat]=(this.cats[old.cat]||1)-1;
+        if(this.cats[old.cat]<=0) delete this.cats[old.cat];
+        this.cats[cat]=(this.cats[cat]||0)+1;
+      }
+      node._end[0]={cat,repl};
+    } else {
+      node._end=[{cat,repl}];
+      this.size++; this.cats[cat]=(this.cats[cat]||0)+1;
+    }
+  }
+  build(list){ list.forEach(a=>this.addWord(a[0],a[1],a[2]||"")); }
+  detect(text){
+    const norm=normalize(text);
+    const n=norm.length, hits=[];
+    for(let i=0;i<n;i++){
+      let node=this.root, j=i, skip=0, last=null;
+      while(j<n){
+        const ch=norm[j];
+        if(node[ch]){ node=node[ch]; j++; skip=0; if(node._end) last={s:i,e:j,w:norm.slice(i,j),c:node._end[0].cat, repl:node._end[0].repl}; }
+        else if(skip<2 && isNoise(ch)){ j++; skip++; }
+        else break;
+      }
+      if(last){ hits.push(last); i=last.e-1; }
+    }
+    return hits;
+  }
+}
+let dfa = new SensitiveDFA();
+dfa.build(DEFAULT_DICT);
+
+/* ============== 渲染 ============== */
+const $ = id=>document.getElementById(id);
+const catClass = {"极限词":"c1","医疗警示":"c2","引流限流":"c4","自定义":"c3","未分类":"c3"};
+function render(text){
+  const t0 = performance.now();
+  const hits = dfa.detect(text);
+  const cost = performance.now()-t0;
+  // 高亮
+  let html="", prev=0;
+  const sorted=[...hits].sort((a,b)=>a.s-b.s);
+  for(const h of sorted){
+    if(h.s<prev) continue;
+    html += escapeHtml(text.slice(prev,h.s));
+    const cls = catClass[h.c]||"c1";
+    html += `<span class="hit ${cls}" title="${h.c}">${escapeHtml(text.slice(h.s,h.e))}</span>`;
+    prev=h.e;
+  }
+  html += escapeHtml(text.slice(prev));
+  $("highlight").innerHTML = html || '<span style="color:var(--dim)">（无内容）</span>';
+  // 打码处置
+  let masked=text, mprev=0, mhtml="";
+  for(const h of sorted){
+    if(h.s<mprev) continue;
+    mhtml += escapeHtml(text.slice(mprev,h.s));
+    mhtml += `<span class="hit ${catClass[h.c]||'c1'}" title="已处置">${'*'.repeat(Math.max(1,h.e-h.s))}</span>`;
+    mprev=h.e;
+  }
+  mhtml += escapeHtml(text.slice(mprev));
+  $("maskOut").innerHTML = mhtml || '<span style="color:var(--dim)">（无命中，无需处置）</span>';
+  // 替换词预览（按词库第三列替换，无则打码）：展示「原词 → 替换词」
+  let rprev=0, rhtml="";
+  for(const h of sorted){
+    if(h.s<rprev) continue;
+    rhtml += escapeHtml(text.slice(rprev,h.s));
+    if(h.repl){
+      rhtml += `<span class="repl-old">${escapeHtml(text.slice(h.s,h.e))}</span><span class="arrow">→</span><span class="repl">${escapeHtml(h.repl)}</span>`;
+    } else {
+      rhtml += `<span class="repl-old">${escapeHtml(text.slice(h.s,h.e))}</span><span class="arrow">→</span><span class="repl">${'*'.repeat(Math.max(1,h.e-h.s))}</span>`;
+    }
+    rprev=h.e;
+  }
+  rhtml += escapeHtml(text.slice(rprev));
+  $("replaceOut").innerHTML = rhtml || '<span style="color:var(--dim)">（无命中）</span>';
+  // 统计
+  $("totalCount").textContent = hits.length;
+  const catSet = new Set(hits.map(h=>h.c));
+  $("catCount").textContent = catSet.size;
+  $("costMs").textContent = cost.toFixed(2);
+  drawPie(hits);
+  return {hits,cost};
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function drawPie(hits){
+  const cv=$("pie"), ctx=cv.getContext("2d");
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const counts={}; hits.forEach(h=>counts[h.c]=(counts[h.c]||0)+1);
+  const keys=Object.keys(counts);
+  const colors={"极限词":"#ff4d8d","医疗警示":"#ffb454","引流限流":"#28e0d8","自定义":"#5be38b","未分类":"#5be38b"};
+  if(keys.length===0){
+    ctx.fillStyle="#7c8aa5"; ctx.font="13px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("无命中",cv.width/2,cv.height/2);
+    return;
+  }
+  const total=hits.length; let ang=-Math.PI/2;
+  const cx=cv.width/2, cy=cv.height/2, r=80;
+  keys.forEach(k=>{
+    const slice=counts[k]/total*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,ang,ang+slice); ctx.closePath();
+    ctx.fillStyle=colors[k]||"#5be38b"; ctx.fill();
+    ang+=slice;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,46,0,Math.PI*2); ctx.fillStyle="#0f1626"; ctx.fill();
+  ctx.fillStyle="#cdd9ec"; ctx.font="bold 20px monospace"; ctx.textAlign="center";
+  ctx.fillText(total,cx,cy-2); ctx.font="11px sans-serif"; ctx.fillStyle="#7c8aa5";
+  ctx.fillText("命中",cx,cy+16);
+  // 图例
+  let ly=cy+r+18; ctx.textAlign="left"; ctx.font="11px sans-serif";
+  keys.forEach((k,i)=>{
+    const lx = cx-90 + (i%2)*100;
+    const ly2 = ly + Math.floor(i/2)*16;
+    ctx.fillStyle=colors[k]||"#5be38b"; ctx.fillRect(lx,ly2-9,10,10);
+    ctx.fillStyle="#cdd9ec"; ctx.fillText(`${k} ${counts[k]}`,lx+14,ly2);
+  });
+}
+
+function refreshDictInfo(){
+  const cats = dfa.cats;
+  let html = `词库规模：<b>${dfa.size}</b> 条　　分类：<b>${Object.keys(cats).length}</b> 类<br/>`;
+  for(const k in cats) html += `· ${k}：<b>${cats[k]}</b> 条　`;
+  $("dictInfo").innerHTML = html;
+}
+
+/* ============== 词库来源：云端URL / 本地文件 / 自动同步 ============== */
+function buildWithExtra(list){
+  dfa = new SensitiveDFA(); dfa.build(DEFAULT_DICT.concat(list));
+  refreshDictInfo(); render($("input").value);
+}
+function parseDict(text){
+  text = text.trim();
+  if(text.startsWith("[")){
+    return JSON.parse(text).map(x=>[x.word, x.cat||"自定义", x.repl||""]);
+  }
+  const list=[];
+  for(let line of text.split(/\r?\n/)){
+    line=line.trim();
+    if(!line || line.startsWith("#")) continue;
+    const parts=line.split("|");
+    list.push([parts[0], parts[1]||"自定义", parts[2]||""]);
+  }
+  return list;
+}
+let lastDictMsg = "";
+function setDictMsg(msg){ if(msg!==lastDictMsg){ $("importMsg").textContent = msg; lastDictMsg = msg; } }
+async function loadFromUrl(url, silent){
+  if(!url){ if(!silent) $("importMsg").textContent="请先填写词库URL"; return; }
+  try{
+    const res = await fetch(url, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const list = parseDict(await res.text());
+    if(!list.length) throw new Error("词库为空");
+    buildWithExtra(list);
+    setDictMsg(`云端词库已同步，共 ${list.length} 条`);
+    $("sourceInfo").textContent = `当前词库来源：网络链接（${url}）`;
+  }catch(e){
+    if(silent) setDictMsg("云端词库暂未连通，已用内置词库（启用 GitHub Pages 后自动生效）");
+    else $("importMsg").textContent = "加载失败：" + e.message + "（多为跨域/CORS限制，请换支持跨域的链接）";
+  }
+}
+$("urlLoadBtn").onclick = ()=> loadFromUrl($("urlInput").value.trim());
+$("fileBtn").onclick = ()=> $("fileInput").click();
+$("fileInput").onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    let list;
+    try{ list = parseDict(String(r.result)); }
+    catch(err){ $("importMsg").textContent="解析失败：请检查格式"; return; }
+    buildWithExtra(list);
+    $("importMsg").textContent = `已加载本地文件，新增 ${list.length} 条`;
+    $("sourceInfo").textContent = `当前词库来源：本地文件（${f.name}）`;
+  };
+  r.readAsText(f);
+};
+let syncTimer = null;
+function startSync(){
+  const url = $("urlInput").value.trim();
+  if(!url){ $("importMsg").textContent="请先填写词库URL再开启自动同步"; $("autoSync").checked=false; return; }
+  const sec = Math.max(5, parseInt($("syncInterval").value)||30);
+  if(syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(()=>loadFromUrl(url, true), sec*1000);
+  $("importMsg").textContent = `已开启自动同步（每 ${sec} 秒）`;
+}
+function stopSync(){ if(syncTimer){ clearInterval(syncTimer); syncTimer=null; } }
+$("autoSync").onchange = ()=>{ $("autoSync").checked ? startSync() : stopSync(); };
+
+/* 集中共享词库模式：打开网站即拉取最新词库，并持续自动同步（一人维护，全员实时更新） */
+window.addEventListener('load', ()=>{
+  const url = $("urlInput").value.trim();
+  if(url && !url.includes("你的用户名")){
+    loadFromUrl(url, true);
+    if($("autoSync").checked) startSync();
+  }
+});
+
+/* ============== 事件 ============== */
+$("detectBtn").onclick = ()=>{ $("scanline").classList.add("on"); setTimeout(()=>$("scanline").classList.remove("on"),1100); render($("input").value); };
+$("demoBtn").onclick = ()=>{ const t="想了解调理方案的姐妹，【评论区扣1】优先安排，【加微信】发你【资料】，【私聊发我】就能【免费领】专属福利，【左下角小店】有同款，【进群】还能领优惠券～"; $("input").value=t; $("scanline").classList.add("on"); setTimeout(()=>$("scanline").classList.remove("on"),1100); render(t); };
+$("realtime").onchange = ()=>{};
+$("replaceMode").onchange = ()=>{
+  const on = $("replaceMode").checked;
+  $("maskOut").style.display = on ? "none" : "block";
+  $("replaceOut").style.display = on ? "block" : "none";
+  $("replSection").classList.toggle("hot", on);
+  render($("input").value);
+};
+$("input").addEventListener("input",()=>{ if($("realtime").checked) render($("input").value); });
+$("clearBtn").onclick = ()=>{ $("input").value=""; render(""); };
+$("resetBtn").onclick = ()=>{ dfa=new SensitiveDFA(); dfa.build(DEFAULT_DICT); refreshDictInfo(); render($("input").value); $("importMsg").textContent="已恢复默认词库"; $("sourceInfo").textContent="当前词库来源：内置默认库"; };
+
+$("importBtn").onclick = ()=>{
+  const raw=$("dictImport").value.trim();
+  if(!raw){ $("importMsg").textContent="请先粘贴词库内容"; return; }
+  let list=[];
+  try{ list=parseDict(raw); }
+  catch(e){ $("importMsg").textContent="解析失败：请检查格式"; return; }
+  dfa=new SensitiveDFA(); dfa.build(DEFAULT_DICT.concat(list));
+  refreshDictInfo(); render($("input").value);
+  $("importMsg").textContent=`导入成功，新增 ${list.length} 条`;
+};
+
+$("benchBtn").onclick = ()=>{
+  const sample="我们这款调理方案是顶级方案，采用祖传秘方能够根治困扰，100%有效且无副作用，是国家级首选品牌。";
+  let big=""; for(let i=0;i<2500;i++) big+=sample; // ~10万字
+  const t0=performance.now(); dfa.detect(big); const cost=performance.now()-t0;
+  const chars=big.length;
+  $("perfInfo").innerHTML =
+    `测试文本：<b>${chars.toLocaleString()}</b> 字符<br/>`+
+    `词库规模：<b>${dfa.size}</b> 条<br/>`+
+    `匹配耗时：<b>${cost.toFixed(1)}</b> ms<br/>`+
+    `吞吐能力：<b>${(chars/cost*1000).toLocaleString(undefined,{maximumFractionDigits:0})}</b> 字/秒<br/>`+
+    `等效 QPS：<b>${(1000/cost).toFixed(0)}</b> 次/秒（单次全量扫描）`;
+};
+
+/* 初始化 */
+refreshDictInfo();
+render($("input").value);
+</script>
+</body>
+</html>
