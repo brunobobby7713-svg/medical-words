@@ -114,6 +114,22 @@
   .brand-text p{ margin:4px 0 0; font-size:13px; color:var(--dim); }
   .brand-status{ font-size:11px; padding:4px 10px; border-radius:20px; background:rgba(91,227,139,.12); color:var(--green); border:1px solid rgba(91,227,139,.25); white-space:nowrap; }
   @media(max-width:680px){ .brand-bar{ flex-wrap:wrap; } .brand-status{ width:100%; text-align:center; margin-top:8px; } }
+  .help-btn{ margin-left:auto; background:linear-gradient(135deg,#1b6ef3,#28e0d8); color:#fff; border:none; border-radius:10px; padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(40,224,216,.25); }
+  .help-btn:hover{ filter:brightness(1.1); }
+  .modal-mask{ position:fixed; inset:0; background:rgba(2,6,14,.72); display:none; align-items:flex-start; justify-content:center; z-index:99; padding:40px 16px; overflow:auto; }
+  .modal-mask.on{ display:flex; }
+  .modal{ background:#0b1220; border:1px solid var(--line); border-radius:16px; max-width:840px; width:100%; padding:26px 32px 34px; color:#dfe8f4; line-height:1.7; }
+  .modal h2{ color:#fff; margin:0 0 6px; font-size:20px; }
+  .modal h3{ color:#28e0d8; margin:22px 0 8px; font-size:16px; border-left:3px solid #28e0d8; padding-left:10px; }
+  .modal p,.modal li{ font-size:14px; }
+  .modal code{ background:rgba(40,224,216,.12); color:#7df0a8; padding:1px 6px; border-radius:5px; }
+  .modal table{ width:100%; border-collapse:collapse; margin:8px 0; font-size:13px; }
+  .modal th,.modal td{ border:1px solid var(--line); padding:6px 10px; text-align:left; }
+  .modal th{ background:rgba(40,224,216,.1); color:#cfe; }
+  .modal .close{ float:right; background:none; border:1px solid var(--line); color:#9fb3c8; border-radius:8px; padding:4px 12px; cursor:pointer; }
+  .modal .close:hover{ color:#fff; border-color:#28e0d8; }
+  .modal .warn{ color:#ff8db0; }
+  @media(max-width:680px){ .help-btn{ margin-left:0; width:100%; margin-top:10px; } }
 </style>
 </head>
 <body>
@@ -130,6 +146,7 @@
       <p>敏感词检测 / 合规替换 / 云端实时同步 · 基于 DFA 状态机</p>
     </div>
     <div class="brand-status">云端词库已接入 · 5s 同步</div>
+    <button class="help-btn" id="helpBtn">📖 使用说明</button>
   </div>
   <div class="tags">
     <span class="tag">算法 O(n)</span>
@@ -601,9 +618,65 @@ $("benchBtn").onclick = ()=>{
     `等效 QPS：<b>${(1000/cost).toFixed(0)}</b> 次/秒（单次全量扫描）`;
 };
 
+/* 使用说明弹窗 */
+$("helpBtn").onclick = ()=> $("helpMask").classList.add("on");
+$("helpClose").onclick = ()=> $("helpMask").classList.remove("on");
+$("helpMask").addEventListener("click",(e)=>{ if(e.target===$("helpMask")) $("helpMask").classList.remove("on"); });
+
 /* 初始化 */
 refreshDictInfo();
 render($("input").value);
 </script>
+
+<div class="modal-mask" id="helpMask">
+  <div class="modal">
+    <button class="close" id="helpClose">关闭 ✕</button>
+    <h2>📖 使用说明与注意事项</h2>
+    <p>这是一个<b>发布前自查工具</b>——把要发的文案粘进去，自动标出易踩雷的违禁词/限流词，并给出合规替换建议。无需安装，打开即用。</p>
+
+    <h3>一、怎么打开</h3>
+    <p>推荐发这个短链接给任何人，打开即用：</p>
+    <p><code>https://brunobobby7713-svg.github.io/medical-words/</code></p>
+    <p>也可双击本地 <code>content-safety-engine.html</code>，或把该文件发给同事。</p>
+    <p class="warn">⚠️ 真正的网站是带 <code>.html</code> 的链接，别把 <code>medical-words.txt</code>（词库数据）当网站发。</p>
+
+    <h3>二、日常怎么用</h3>
+    <ul>
+      <li><b>检测</b>：删掉示例，粘贴你的文案，自动实时标红；也可点「开始检测」。</li>
+      <li><b>三色含义</b>：🔴粉=极限词（广告法禁用）｜🟠橙=医疗警示（功效违禁）｜🔵青=引流限流（易触发限流）。</li>
+      <li><b>替换词模式</b>：勾选后下方显示绿色合规替换词，如 <code>~~根治~~ → 调理</code>。</li>
+      <li><b>高频话术演示</b>：点一下铺满引流限流词，给领导看最直观。</li>
+      <li><b>性能压测</b>：点「注入 10 万字压测」展示引擎吞吐指标。</li>
+    </ul>
+
+    <h3>三、全员建议加词（任何人可提交）</h3>
+    <p>页面「词库管理」区最下方有 <code>💡 全员建议加词</code> 表单：填词 + 选分类 + 填替换词（可选），点「提交建议」→ 自动跳到 GitHub 预填好的提交页 → 点 Submit 即可。<b>管理员审核合并后，全员 5 秒内自动更新。</b></p>
+    <p class="warn">注意：提交建议需对方有 GitHub 账号（免费）；提交是"建议"，不是免审核直接生效。</p>
+
+    <h3>四、怎么加词 / 改词（管理员）</h3>
+    <p>打开仓库 <code>github.com/brunobobby7713-svg/medical-words</code> → 点 <code>medical-words.txt</code> → 铅笔编辑 → 按格式改：</p>
+    <p><code>词语|分类|替换词</code>　例：<code>最|极限词|很</code>　<code>抗衰|医疗警示|年轻化</code></p>
+    <p>Commit 后全员 5 秒自动同步。<b>分类只能三选一：极限词 / 医疗警示 / 引流限流。</b>第三列替换词可省略（省略只标红不打码）。</p>
+
+    <h3>五、注意事项（必看）</h3>
+    <ul>
+      <li><b>词库 URL 框别填网页链接</b>：只能填 <code>.txt</code>/<code>.json</code> 结尾的词库地址（已内置好，一般不动）。填小红书/公众号链接会报错。</li>
+      <li><b>加词走正规入口</b>：用网站「全员建议加词」或 GitHub 编辑，别试图把笔记链接粘进 URL 框"自动抓词"（做不到）。</li>
+      <li><b>两类改动麻烦度不同</b>：改词库 <code>txt</code> → 零上传、全员自动同步；改网站功能/界面才需重传 HTML（当前功能已做齐，短期不用）。</li>
+      <li><b>GitHub Pages 有延迟</b>：上传/改文件后线上约 1-5 分钟才生效，稍等再刷新。</li>
+      <li><b>建议加词是"建议制"</b>：别人提交后需你审核合并才进共享库（想免审核需另搭后端）。</li>
+      <li><b>改错了能回退</b>：GitHub 里每个文件点 <code>History</code> 可看历史、一键恢复。</li>
+      <li><b>换人接手</b>：只需把短链接发过去，对方打开即用；词库维护权限在 GitHub 仓库设置分配。</li>
+    </ul>
+
+    <h3>六、合规底线</h3>
+    <ul>
+      <li>本工具仅用于<b>发布前合规自检</b>，不是规避平台监管。</li>
+      <li>词库自行维护，<b>请勿添加政治类违禁词</b>。</li>
+      <li>替换词要写<b>真正合规</b>的词，别换汤不换药。</li>
+      <li>标红只是提示"注意上下文"，非一刀切禁用——科普提"抗衰"没事，配上"免费领/评论区扣1"才易限流。</li>
+    </ul>
+  </div>
+</div>
 </body>
 </html>
