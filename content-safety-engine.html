@@ -77,12 +77,12 @@
   .highlight{ min-height:150px; border-radius:10px; background:#070b13;
     border:1px solid var(--line); padding:14px; font-size:14px; line-height:2;
     white-space:pre-wrap; word-break:break-word; }
-  .hit{ padding:1px 5px; border-radius:5px; font-weight:700; color:#04121a;
-    background:var(--mag); box-shadow:0 0 12px rgba(255,77,141,.5); }
+  .hit{ padding:1px 0; border-radius:4px; font-weight:700; color:#04121a;
+    background:var(--mag); box-shadow:inset 0 0 0 1.5px rgba(255,77,141,.9); }
   .hit.c1{ background:var(--mag); }
-  .hit.c2{ background:var(--amber); box-shadow:0 0 12px rgba(255,180,84,.5); }
-  .hit.c3{ background:var(--green); box-shadow:0 0 12px rgba(91,227,139,.5); }
-  .hit.c4{ background:var(--cyan); box-shadow:0 0 12px rgba(40,224,216,.5); }
+  .hit.c2{ background:var(--amber); box-shadow:inset 0 0 0 1.5px rgba(255,180,84,.9); }
+  .hit.c3{ background:var(--green); box-shadow:inset 0 0 0 1.5px rgba(91,227,139,.9); }
+  .hit.c4{ background:var(--cyan); box-shadow:inset 0 0 0 1.5px rgba(40,224,216,.9); }
   .repl{ padding:2px 7px; border-radius:6px; font-weight:700; font-size:14px; color:#7df0a8; background:rgba(91,227,139,.18); border:1px solid rgba(91,227,139,.4); }
   .repl-old{ padding:2px 5px; border-radius:6px; font-weight:600; color:var(--dim); background:rgba(255,77,141,.10); text-decoration:line-through; }
   .arrow{ color:var(--cyan); font-weight:700; margin:0 3px; }
@@ -381,10 +381,10 @@ class SensitiveDFA{
     const norm=normalize(text);
     const n=norm.length, hits=[];
     for(let i=0;i<n;i++){
-      let node=this.root, j=i, skip=0, last=null;
+      let node=this.root, j=i, skip=0, last=null, first=-1;
       while(j<n){
         const ch=norm[j];
-        if(node[ch]){ node=node[ch]; j++; skip=0; if(node._end) last={s:i,e:j,w:norm.slice(i,j),c:node._end[0].cat, repl:node._end[0].repl}; }
+        if(node[ch]){ if(first<0) first=j; node=node[ch]; j++; skip=0; if(node._end) last={s:first,e:j,w:norm.slice(first,j),c:node._end[0].cat, repl:node._end[0].repl}; }
         else if(skip<2 && isNoise(ch)){ j++; skip++; }
         else break;
       }
@@ -410,7 +410,7 @@ function render(text){
     if(h.s<prev) continue;
     html += escapeHtml(text.slice(prev,h.s));
     const cls = catClass[h.c]||"c1";
-    html += `<span class="hit ${cls}" title="${h.c}">${escapeHtml(text.slice(h.s,h.e))}</span>`;
+    html += `<span class="hit ${cls}" title="命中词库：${escapeHtml(text.slice(h.s,h.e))}（${h.c}）">${escapeHtml(text.slice(h.s,h.e))}</span>`;
     prev=h.e;
   }
   html += escapeHtml(text.slice(prev));
@@ -420,7 +420,7 @@ function render(text){
   for(const h of sorted){
     if(h.s<mprev) continue;
     mhtml += escapeHtml(text.slice(mprev,h.s));
-    mhtml += `<span class="hit ${catClass[h.c]||'c1'}" title="已处置">${'*'.repeat(Math.max(1,h.e-h.s))}</span>`;
+    mhtml += `<span class="hit ${catClass[h.c]||'c1'}" title="已处置：${escapeHtml(text.slice(h.s,h.e))}（${h.c}）">${'*'.repeat(Math.max(1,h.e-h.s))}</span>`;
     mprev=h.e;
   }
   mhtml += escapeHtml(text.slice(mprev));
