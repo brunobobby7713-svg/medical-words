@@ -85,6 +85,7 @@
   .hit.c4{ background:var(--cyan); box-shadow:inset 0 0 0 1.5px rgba(40,224,216,.9); }
   .repl{ padding:2px 7px; border-radius:6px; font-weight:700; font-size:14px; color:#7df0a8; background:rgba(91,227,139,.18); border:1px solid rgba(91,227,139,.4); }
   .repl-old{ padding:2px 5px; border-radius:6px; font-weight:600; color:var(--dim); background:rgba(255,77,141,.10); text-decoration:line-through; }
+  .replSel{ margin:0 4px; padding:2px 6px; border-radius:6px; font-weight:700; font-size:14px; color:#7df0a8; background:#0d1622; border:1px solid rgba(91,227,139,.45); }
   .arrow{ color:var(--cyan); font-weight:700; margin:0 3px; }
   .card.hot{ border-color:rgba(91,227,139,.55); box-shadow:0 0 0 1px rgba(91,227,139,.30), 0 0 22px rgba(91,227,139,.10); }
   .stats{ display:flex; gap:14px; margin:14px 0; flex-wrap:wrap; }
@@ -215,10 +216,11 @@
           <option value="医疗警示">医疗警示</option>
           <option value="引流限流">引流限流</option>
         </select>
-        <input class="txt" id="sgRepl" placeholder="替换词（可选），如：年轻化" style="flex:1 1 120px" />
+        <input class="txt" id="sgRepl" placeholder="替换词（可选，多个用 | 隔开，如：年轻化|抗初老）" style="flex:1 1 120px" />
         <button class="ghost" id="sgBtn">提交建议</button>
       </div>
-      <div id="sgMsg" style="font-size:12px;color:var(--dim);margin-top:6px"></div>
+      <div style="font-size:12px;color:var(--dim);margin-top:6px">提示：替换词可填多个，用 <code>|</code> 隔开（如 <code>年轻化|抗初老</code>），合并进词库后，生成合规文案时可在下拉框任选其一。</div>
+      <div id="sgMsg" style="font-size:12px;color:var(--green);margin-top:6px"></div>
     </div>
   </section>
 
@@ -264,7 +266,13 @@
     <div style="font-size:12px;color:var(--dim);margin-bottom:6px">① 打码预览（默认）：把命中词遮成 *，用于发布前风险评估</div>
     <div class="highlight" id="maskOut" style="min-height:60px"><span style="color:var(--dim)">命中词将自动打码处置，可用于发布前的安全替换预览…</span></div>
     <div style="margin-top:14px;font-size:12px;color:var(--dim)">② 合规替换词（勾「替换词模式」启用）：命中词自动换成词库里的合规词</div>
-    <div class="highlight" id="replaceOut" style="min-height:60px;margin-top:6px;display:none"><span style="color:var(--dim)">开启「替换词模式」后，命中词将按词库替换为合规词…</span></div>
+    <div class="highlight" id="replaceOut" style="min-height:60px;margin-top:6px;display:none"><span style="color:var(--dim)">开启「替换词模式」后，命中词将按词库替换为合规词；每个词若有多个候选，可在下拉框任选其一…</span></div>
+    <div style="margin-top:14px;font-size:12px;color:var(--dim)">③ 生成最终文案：按你选的替换词一键生成可复制的合规文案（无替换词的命中词以 * 占位，请手动处理）</div>
+    <div class="controls" style="margin-top:6px">
+      <button id="genBtn">生成最终文案</button>
+      <button class="ghost" id="copyBtn">复制文案</button>
+    </div>
+    <textarea id="finalOut" readonly placeholder="勾选「替换词模式」并在上方为每个命中词选好替换词后，点「生成最终文案」…" style="width:100%;min-height:90px;margin-top:8px;border-radius:10px;background:#070b13;border:1px solid var(--line);color:#7df0a8;padding:12px;font-size:14px;line-height:1.8;resize:vertical;font-family:inherit"></textarea>
   </section>
 </main>
 
@@ -357,7 +365,9 @@ class SensitiveDFA{
   constructor(){ this.root={}; this.size=0; this.cats={}; }
   addWord(word,cat,repl){
     if(!word) return;
-    cat = cat||"未分类"; repl = repl||"";
+    cat = cat||"未分类";
+    if(typeof repl === "string") repl = repl ? [repl] : [];
+    if(!Array.isArray(repl)) repl = [];
     let node=this.root;
     for(const ch of word){
       if(!node[ch]) node[ch]={};
@@ -398,9 +408,19 @@ dfa.build(DEFAULT_DICT);
 
 /* ============== 渲染 ============== */
 const $ = id=>document.getElementById(id);
-const catClass = {"极限词":"c1","医疗警示":"c2","引流限流":"c4","自定义":"c3","未分类":"c3"};
+const catColorMap = {"极限词":"c1","医疗警示":"c2","引流限流":"c4","自定义":"c3","未分类":"c3"};
+function catColor(cat){
+  if(catColorMap[cat]) return catColorMap[cat];
+  if(/极限|绝对|夸大|广告法|比较/.test(cat)) return "c1";
+  if(/导流|引流|微信|私域|加V|二维码|私信|评论区|领取|扫码/.test(cat)) return "c4";
+  if(/边界/.test(cat)) return "c3";
+  return "c2";
+}
+const CAT_HEX = {c1:"#ff4d8d",c2:"#ffb454",c3:"#5be38b",c4:"#28e0d8"};
+let replChoices = {};
 function render(text){
   const t0 = performance.now();
+  replChoices = {};
   const hits = dfa.detect(text);
   const cost = performance.now()-t0;
   // 高亮
@@ -409,7 +429,7 @@ function render(text){
   for(const h of sorted){
     if(h.s<prev) continue;
     html += escapeHtml(text.slice(prev,h.s));
-    const cls = catClass[h.c]||"c1";
+    const cls = catColor(h.c);
     html += `<span class="hit ${cls}" title="命中词库：${escapeHtml(text.slice(h.s,h.e))}（${h.c}）">${escapeHtml(text.slice(h.s,h.e))}</span>`;
     prev=h.e;
   }
@@ -420,20 +440,30 @@ function render(text){
   for(const h of sorted){
     if(h.s<mprev) continue;
     mhtml += escapeHtml(text.slice(mprev,h.s));
-    mhtml += `<span class="hit ${catClass[h.c]||'c1'}" title="已处置：${escapeHtml(text.slice(h.s,h.e))}（${h.c}）">${'*'.repeat(Math.max(1,h.e-h.s))}</span>`;
+    mhtml += `<span class="hit ${catColor(h.c)}" title="已处置：${escapeHtml(text.slice(h.s,h.e))}（${h.c}）">${'*'.repeat(Math.max(1,h.e-h.s))}</span>`;
     mprev=h.e;
   }
   mhtml += escapeHtml(text.slice(mprev));
   $("maskOut").innerHTML = mhtml || '<span style="color:var(--dim)">（无命中，无需处置）</span>';
-  // 替换词预览（按词库第三列替换，无则打码）：展示「原词 → 替换词」
+  // 替换词预览（多候选可下拉任选）：展示「原词 → [替换词下拉/文本]」
   let rprev=0, rhtml="";
   for(const h of sorted){
     if(h.s<rprev) continue;
     rhtml += escapeHtml(text.slice(rprev,h.s));
-    if(h.repl){
-      rhtml += `<span class="repl-old">${escapeHtml(text.slice(h.s,h.e))}</span><span class="arrow">→</span><span class="repl">${escapeHtml(h.repl)}</span>`;
+    const opts = (h.repl && h.repl.length) ? h.repl : null;
+    const key = h.s+"-"+h.e+"-"+h.w;
+    rhtml += `<span class="repl-old">${escapeHtml(text.slice(h.s,h.e))}</span><span class="arrow">→</span>`;
+    if(opts){
+      if(opts.length===1){
+        rhtml += `<span class="repl">${escapeHtml(opts[0])}</span>`;
+      } else {
+        const sel = (replChoices[key]!=null) ? replChoices[key] : 0;
+        rhtml += `<select class="replSel" data-k="${key}">`;
+        opts.forEach((o,i)=>{ rhtml += `<option value="${i}"${i===sel?" selected":""}>${escapeHtml(o)}</option>`; });
+        rhtml += `</select>`;
+      }
     } else {
-      rhtml += `<span class="repl-old">${escapeHtml(text.slice(h.s,h.e))}</span><span class="arrow">→</span><span class="repl">${'*'.repeat(Math.max(1,h.e-h.s))}</span>`;
+      rhtml += `<span class="repl">${"*".repeat(Math.max(1,h.e-h.s))}</span>`;
     }
     rprev=h.e;
   }
@@ -447,6 +477,27 @@ function render(text){
   drawPie(hits);
   return {hits,cost};
 }
+function genFinal(){
+  const text = $("input").value;
+  const hits = dfa.detect(text);
+  const sorted=[...hits].sort((a,b)=>a.s-b.s);
+  let out="", prev=0;
+  for(const h of sorted){
+    if(h.s<prev) continue;
+    out += text.slice(prev,h.s);
+    const key = h.s+"-"+h.e+"-"+h.w;
+    const opts = (h.repl && h.repl.length) ? h.repl : null;
+    if(opts){
+      const idx = (replChoices[key]!=null) ? replChoices[key] : 0;
+      out += opts[idx];
+    } else {
+      out += "*".repeat(Math.max(1,h.e-h.s));
+    }
+    prev=h.e;
+  }
+  out += text.slice(prev);
+  $("finalOut").value = out;
+}
 function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
 function drawPie(hits){
@@ -454,7 +505,7 @@ function drawPie(hits){
   ctx.clearRect(0,0,cv.width,cv.height);
   const counts={}; hits.forEach(h=>counts[h.c]=(counts[h.c]||0)+1);
   const keys=Object.keys(counts);
-  const colors={"极限词":"#ff4d8d","医疗警示":"#ffb454","引流限流":"#28e0d8","自定义":"#5be38b","未分类":"#5be38b"};
+  const colors=CAT_HEX;
   if(keys.length===0){
     ctx.fillStyle="#7c8aa5"; ctx.font="13px sans-serif"; ctx.textAlign="center";
     ctx.fillText("无命中",cv.width/2,cv.height/2);
@@ -466,7 +517,7 @@ function drawPie(hits){
     const slice=counts[k]/total*Math.PI*2;
     ctx.beginPath(); ctx.moveTo(cx,cy);
     ctx.arc(cx,cy,r,ang,ang+slice); ctx.closePath();
-    ctx.fillStyle=colors[k]||"#5be38b"; ctx.fill();
+    ctx.fillStyle=CAT_HEX[catColor(k)]||"#5be38b"; ctx.fill();
     ang+=slice;
   });
   ctx.beginPath(); ctx.arc(cx,cy,46,0,Math.PI*2); ctx.fillStyle="#0f1626"; ctx.fill();
@@ -478,7 +529,7 @@ function drawPie(hits){
   keys.forEach((k,i)=>{
     const lx = cx-90 + (i%2)*100;
     const ly2 = ly + Math.floor(i/2)*16;
-    ctx.fillStyle=colors[k]||"#5be38b"; ctx.fillRect(lx,ly2-9,10,10);
+    ctx.fillStyle=CAT_HEX[catColor(k)]||"#5be38b"; ctx.fillRect(lx,ly2-9,10,10);
     ctx.fillStyle="#cdd9ec"; ctx.fillText(`${k} ${counts[k]}`,lx+14,ly2);
   });
 }
@@ -498,14 +549,21 @@ function buildWithExtra(list){
 function parseDict(text){
   text = text.trim();
   if(text.startsWith("[")){
-    return JSON.parse(text).map(x=>[x.word, x.cat||"自定义", x.repl||""]);
+    return JSON.parse(text).map(x=>{
+      let repl = x.repl;
+      if(Array.isArray(repl)) repl = repl;
+      else if(typeof repl === "string" && repl) repl = [repl];
+      else repl = [];
+      return [x.word, x.cat||"自定义", repl];
+    });
   }
   const list=[];
   for(let line of text.split(/\r?\n/)){
     line=line.trim();
     if(!line || line.startsWith("#")) continue;
     const parts=line.split("|");
-    list.push([parts[0], parts[1]||"自定义", parts[2]||""]);
+    const repl = parts.slice(2).map(s=>s.trim()).filter(Boolean);
+    list.push([parts[0], parts[1]||"自定义", repl]);
   }
   return list;
 }
@@ -578,6 +636,18 @@ $("replaceMode").onchange = ()=>{
   render($("input").value);
 };
 $("input").addEventListener("input",()=>{ if($("realtime").checked) render($("input").value); });
+$("genBtn").onclick = ()=> genFinal();
+$("copyBtn").onclick = ()=>{
+  const v=$("finalOut").value;
+  if(!v){ $("finalOut").focus(); return; }
+  const done=()=>{ const b=$("copyBtn"); const t=b.textContent; b.textContent="已复制✓"; setTimeout(()=>b.textContent=t,1200); };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(v).then(done).catch(()=>{ $("finalOut").select(); document.execCommand("copy"); done(); }); }
+  else { $("finalOut").select(); document.execCommand("copy"); done(); }
+};
+$("replaceOut").addEventListener("change", e=>{
+  const sel = e.target.closest(".replSel");
+  if(sel){ replChoices[sel.dataset.k] = parseInt(sel.value,10); if($("finalOut").value) genFinal(); }
+});
 $("clearBtn").onclick = ()=>{ $("input").value=""; render(""); };
 $("resetBtn").onclick = ()=>{ dfa=new SensitiveDFA(); dfa.build(DEFAULT_DICT); refreshDictInfo(); render($("input").value); $("importMsg").textContent="已恢复默认词库"; $("sourceInfo").textContent="当前词库来源：内置默认库"; };
 
@@ -598,7 +668,7 @@ $("sgBtn").onclick = ()=>{
   const r=$("sgRepl").value.trim();
   if(!w){ $("sgMsg").textContent="请先填写要加的词"; return; }
   const line = r ? w+"|"+c+"|"+r : w+"|"+c;
-  const body = "建议在词库 medical-words.txt 中添加以下敏感词：\n\n```\n"+line+"\n```\n\n- 分类："+c+"\n- 替换词："+(r||"（无）")+"\n\n请管理员审核后合并到 main 分支，全员将在 5 秒内自动同步。";
+  const body = "建议在词库 medical-words.txt 中添加以下敏感词：\n\n```\n"+line+"\n```\n\n- 分类："+c+"\n- 替换词："+(r ? (r.indexOf("|")>=0 ? "（多候选，用 | 分隔）"+r : r) : "（无）")+"\n\n请管理员审核后合并到 main 分支，全员将在 5 秒内自动同步。";
   const url = "https://github.com/brunobobby7713-svg/medical-words/issues/new?title="+encodeURIComponent("建议加词："+w)+"&body="+encodeURIComponent(body);
   window.open(url,"_blank");
   $("sgMsg").textContent="已打开 GitHub 提交页 → 点绿色「Submit new issue」即可。管理员审核合并后全员自动同步。";
@@ -650,7 +720,7 @@ render($("input").value);
     </ul>
 
     <h3>三、全员建议加词（任何人可提交）</h3>
-    <p>页面「词库管理」区最下方有 <code>💡 全员建议加词</code> 表单：填词 + 选分类 + 填替换词（可选），点「提交建议」→ 自动跳到 GitHub 预填好的提交页 → 点 Submit 即可。<b>管理员审核合并后，全员 5 秒内自动更新。</b></p>
+    <p>页面「词库管理」区最下方有 <code>💡 全员建议加词</code> 表单：填词 + 选分类 + 填替换词（可选，<b>多个用 <code>|</code> 隔开</b>，如 <code>年轻化|抗初老</code>），点「提交建议」→ 自动跳到 GitHub 预填好的提交页 → 点 Submit 即可。<b>管理员审核合并后，全员 5 秒内自动更新。</b></p>
     <p class="warn">注意：提交建议需对方有 GitHub 账号（免费）；提交是"建议"，不是免审核直接生效。</p>
 
     <h3>四、怎么加词 / 改词（管理员）</h3>
