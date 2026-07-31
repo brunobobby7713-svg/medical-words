@@ -224,41 +224,50 @@
     </div>
   </section>
 
-  <section class="card">
-    <h3>性能压测 <span class="pill">硬核指标</span></h3>
-    <div class="perf" id="perfInfo"></div>
-    <div class="controls"><button class="mag" id="benchBtn">注入 10 万字压测</button></div>
-  </section>
-
-  <section class="card algo">
-    <h3>算法原理 · DFA / Trie 状态机</h3>
-    <svg viewBox="0 0 360 150" width="100%" height="150" style="background:#070b13;border-radius:10px;border:1px solid var(--line)">
-      <defs>
-        <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#28e0d8"/>
-        </marker>
-      </defs>
-      <circle cx="30" cy="75" r="14" fill="#13203a" stroke="#28e0d8" stroke-width="2"/>
-      <text x="30" y="79" font-size="11" fill="#28e0d8" text-anchor="middle">root</text>
-      <circle cx="110" cy="40" r="13" fill="#13203a" stroke="#ff4d8d" stroke-width="2"/>
-      <text x="110" y="44" font-size="13" fill="#ff4d8d" text-anchor="middle">最</text>
-      <circle cx="200" cy="40" r="13" fill="#13203a" stroke="#ff4d8d" stroke-width="2"/>
-      <text x="200" y="44" font-size="13" fill="#ff4d8d" text-anchor="middle">佳</text>
-      <circle cx="200" cy="40" r="18" fill="none" stroke="#ff4d8d" stroke-dasharray="3 3" opacity=".6"/>
-      <circle cx="110" cy="110" r="13" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
-      <text x="110" y="114" font-size="13" fill="#ffb454" text-anchor="middle">国</text>
-      <circle cx="200" cy="110" r="13" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
-      <text x="200" y="114" font-size="12" fill="#ffb454" text-anchor="middle">家</text>
-      <circle cx="280" cy="110" r="13" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
-      <text x="280" y="114" font-size="12" fill="#ffb454" text-anchor="middle">级</text>
-      <circle cx="280" cy="110" r="18" fill="none" stroke="#ffb454" stroke-dasharray="3 3" opacity=".6"/>
-      <line x1="44" y1="70" x2="98" y2="46" stroke="#28e0d8" stroke-width="1.5" marker-end="url(#ar)"/>
-      <line x1="123" y1="40" x2="187" y2="40" stroke="#ff4d8d" stroke-width="1.5" marker-end="url(#ar)"/>
-      <line x1="44" y1="82" x2="98" y2="105" stroke="#28e0d8" stroke-width="1.5" marker-end="url(#ar)"/>
-      <line x1="123" y1="110" x2="187" y2="110" stroke="#ffb454" stroke-width="1.5" marker-end="url(#ar)"/>
-      <line x1="213" y1="110" x2="267" y2="110" stroke="#ffb454" stroke-width="1.5" marker-end="url(#ar)"/>
-    </svg>
-    <p>引擎将敏感词构建为一棵 <code>Trie</code> 树，并在扫描文本时以 <code>O(n)</code> 线性时间完成匹配（n 为文本长度，与词库规模无关）。虚线圈标记 <code>终止状态</code>——一旦走到该节点即判定命中，支持最长匹配与抗干扰跳字（如 <code>最*佳</code> 仍可识别为 <code>最佳</code>）。</p>
+  <section class="card span2" id="techCard">
+    <h3 style="display:flex;justify-content:space-between;align-items:center;margin:0;cursor:pointer" onclick="toggleTech()">
+      <span>技术展示 <span style="font-size:12px;color:var(--dim);font-weight:400">（性能压测 + DFA 算法，点击展开）</span></span>
+      <button class="ghost" id="techToggle" style="font-size:12px;padding:4px 10px" onclick="event.stopPropagation()">展开 ▼</button>
+    </h3>
+    <div id="techBody" style="display:none;margin-top:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <h4 style="margin:0 0 8px;font-size:14px;color:var(--dim)">性能压测</h4>
+          <div class="perf" id="perfInfo"></div>
+          <div class="controls" style="margin-top:8px"><button class="mag" id="benchBtn" style="font-size:12px;padding:6px 12px">注入 10 万字压测</button></div>
+        </div>
+        <div>
+          <h4 style="margin:0 0 8px;font-size:14px;color:var(--dim)">算法原理 · DFA / Trie</h4>
+          <svg viewBox="0 0 360 80" width="100%" height="80" style="background:#070b13;border-radius:8px;border:1px solid var(--line)">
+            <defs>
+              <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" fill="#28e0d8"/>
+              </marker>
+            </defs>
+            <circle cx="30" cy="40" r="13" fill="#13203a" stroke="#28e0d8" stroke-width="2"/>
+            <text x="30" y="44" font-size="10" fill="#28e0d8" text-anchor="middle">root</text>
+            <circle cx="110" cy="21" r="12" fill="#13203a" stroke="#ff4d8d" stroke-width="2"/>
+            <text x="110" y="25" font-size="12" fill="#ff4d8d" text-anchor="middle">最</text>
+            <circle cx="200" cy="21" r="12" fill="#13203a" stroke="#ff4d8d" stroke-width="2"/>
+            <text x="200" y="25" font-size="12" fill="#ff4d8d" text-anchor="middle">佳</text>
+            <circle cx="200" cy="21" r="16" fill="none" stroke="#ff4d8d" stroke-dasharray="3 3" opacity=".6"/>
+            <circle cx="110" cy="59" r="12" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
+            <text x="110" y="63" font-size="12" fill="#ffb454" text-anchor="middle">国</text>
+            <circle cx="200" cy="59" r="12" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
+            <text x="200" y="63" font-size="11" fill="#ffb454" text-anchor="middle">家</text>
+            <circle cx="280" cy="59" r="12" fill="#13203a" stroke="#ffb454" stroke-width="2"/>
+            <text x="280" y="63" font-size="11" fill="#ffb454" text-anchor="middle">级</text>
+            <circle cx="280" cy="59" r="16" fill="none" stroke="#ffb454" stroke-dasharray="3 3" opacity=".6"/>
+            <line x1="43" y1="37" x2="98" y2="24" stroke="#28e0d8" stroke-width="1.5" marker-end="url(#ar)"/>
+            <line x1="122" y1="21" x2="188" y2="21" stroke="#ff4d8d" stroke-width="1.5" marker-end="url(#ar)"/>
+            <line x1="43" y1="43" x2="98" y2="56" stroke="#28e0d8" stroke-width="1.5" marker-end="url(#ar)"/>
+            <line x1="122" y1="59" x2="188" y2="59" stroke="#ffb454" stroke-width="1.5" marker-end="url(#ar)"/>
+            <line x1="212" y1="59" x2="268" y2="59" stroke="#ffb454" stroke-width="1.5" marker-end="url(#ar)"/>
+          </svg>
+          <p style="font-size:12px;margin:8px 0 0;line-height:1.6;color:var(--dim)">引擎将敏感词构建为 <code>Trie</code> 树，扫描文本时以 <code>O(n)</code> 线性时间匹配，支持最长匹配与抗干扰跳字。</p>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="card span2" id="replSection">
@@ -687,6 +696,14 @@ $("benchBtn").onclick = ()=>{
     `吞吐能力：<b>${(chars/cost*1000).toLocaleString(undefined,{maximumFractionDigits:0})}</b> 字/秒<br/>`+
     `等效 QPS：<b>${(1000/cost).toFixed(0)}</b> 次/秒（单次全量扫描）`;
 };
+
+function toggleTech(){
+  const b=$("techBody"), btn=$("techToggle");
+  const shown = b.style.display === "block";
+  b.style.display = shown ? "none" : "block";
+  btn.textContent = shown ? "展开 ▼" : "收起 ▲";
+}
+$("techToggle").onclick = (e)=>{ e.stopPropagation(); toggleTech(); };
 
 /* 使用说明弹窗 */
 $("helpBtn").onclick = ()=> $("helpMask").classList.add("on");
