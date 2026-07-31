@@ -114,15 +114,15 @@
   .help-btn:hover{ filter:brightness(1.1); }
   .modal-mask{ position:fixed; inset:0; background:rgba(2,6,14,.72); display:none; align-items:flex-start; justify-content:center; z-index:99; padding:40px 16px; overflow:auto; }
   .modal-mask.on{ display:flex; }
-  .modal{ background:#0b1220; border:1px solid var(--line); border-radius:16px; max-width:840px; width:100%; padding:26px 32px 34px; color:#dfe8f4; line-height:1.7; }
-  .modal h2{ color:#fff; margin:0 0 6px; font-size:20px; }
+  .modal{ position:relative; background:#0b1220; border:1px solid var(--line); border-radius:16px; max-width:840px; width:100%; padding:26px 32px 34px; color:#dfe8f4; line-height:1.7; }
+  .modal h2{ color:#fff; margin:0 0 6px; font-size:20px; padding-right:72px; }
   .modal h3{ color:#28e0d8; margin:22px 0 8px; font-size:16px; border-left:3px solid #28e0d8; padding-left:10px; }
   .modal p,.modal li{ font-size:14px; }
   .modal code{ background:rgba(40,224,216,.12); color:#7df0a8; padding:1px 6px; border-radius:5px; }
   .modal table{ width:100%; border-collapse:collapse; margin:8px 0; font-size:13px; }
   .modal th,.modal td{ border:1px solid var(--line); padding:6px 10px; text-align:left; }
   .modal th{ background:rgba(40,224,216,.1); color:#cfe; }
-  .modal .close{ float:right; background:none; border:1px solid var(--line); color:#9fb3c8; border-radius:8px; padding:4px 12px; cursor:pointer; }
+  .modal .close{ position:absolute; top:16px; right:18px; background:none; border:1px solid var(--line); color:#9fb3c8; border-radius:8px; padding:4px 12px; cursor:pointer; z-index:2; }
   .modal .close:hover{ color:#fff; border-color:#28e0d8; }
   .modal .warn{ color:#ff8db0; }
   @media(max-width:680px){ .help-btn{ margin-left:0; width:100%; margin-top:10px; } }
@@ -177,7 +177,7 @@
       <div class="stat"><b id="costMs">0</b><span>耗时(ms)</span></div>
     </div>
     <div class="highlight" id="highlight"><span style="color:var(--dim)">检测结果将在此高亮显示…</span></div>
-    <div style="margin-top:14px"><canvas id="pie" width="220" height="220"></canvas></div>
+    <div style="margin-top:14px"><canvas id="pie" width="270" height="270"></canvas></div>
   </section>
 
   <section class="card span2">
@@ -439,17 +439,20 @@ function genFinal(){
   const text = $("input").value;
   const hits = dfa.detect(text);
   const sorted=[...hits].sort((a,b)=>a.s-b.s);
-  let out="", prev=0;
+  let out="", prev=0, prevRepl=null;
   for(const h of sorted){
     if(h.s<prev) continue;
     out += text.slice(prev,h.s);
     const key = h.s+"-"+h.e+"-"+h.w;
     const opts = (h.repl && h.repl.length) ? h.repl : null;
-    if(opts){
-      const idx = (replChoices[key]!=null) ? replChoices[key] : 0;
-      out += opts[idx];
+    const curRepl = opts ? opts[(replChoices[key]!=null)?replChoices[key]:0]
+                         : "*".repeat(Math.max(1,h.e-h.s));
+    // 相邻命中且替换词相同（如「私聊发我」→「联系联系」）→ 只输出一次
+    if(h.s===prev && prevRepl!==null && curRepl===prevRepl){
+      // 跳过重复输出，仅推进指针
     } else {
-      out += "*".repeat(Math.max(1,h.e-h.s));
+      out += curRepl;
+      prevRepl = curRepl;
     }
     prev=h.e;
   }
@@ -460,17 +463,21 @@ function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>
 
 function drawPie(hits){
   const cv=$("pie"), ctx=cv.getContext("2d");
-  ctx.clearRect(0,0,cv.width,cv.height);
+  const size=270;
+  const dpr=window.devicePixelRatio||1;
+  const px=Math.round(size*dpr);
+  if(cv.width!==px){ cv.width=px; cv.height=px; cv.style.width=size+"px"; cv.style.height=size+"px"; }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,size,size);
   const counts={}; hits.forEach(h=>counts[h.c]=(counts[h.c]||0)+1);
   const keys=Object.keys(counts);
-  const colors=CAT_HEX;
   if(keys.length===0){
     ctx.fillStyle="#7c8aa5"; ctx.font="13px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("无命中",cv.width/2,cv.height/2);
+    ctx.fillText("无命中",size/2,size/2);
     return;
   }
   const total=hits.length; let ang=-Math.PI/2;
-  const cx=cv.width/2, cy=cv.height/2, r=80;
+  const cx=size/2, cy=size/2, r=84;
   keys.forEach(k=>{
     const slice=counts[k]/total*Math.PI*2;
     ctx.beginPath(); ctx.moveTo(cx,cy);
@@ -478,17 +485,17 @@ function drawPie(hits){
     ctx.fillStyle=CAT_HEX[catColor(k)]||"#5be38b"; ctx.fill();
     ang+=slice;
   });
-  ctx.beginPath(); ctx.arc(cx,cy,46,0,Math.PI*2); ctx.fillStyle="#0f1626"; ctx.fill();
-  ctx.fillStyle="#cdd9ec"; ctx.font="bold 20px monospace"; ctx.textAlign="center";
-  ctx.fillText(total,cx,cy-2); ctx.font="11px sans-serif"; ctx.fillStyle="#7c8aa5";
-  ctx.fillText("命中",cx,cy+16);
+  ctx.beginPath(); ctx.arc(cx,cy,52,0,Math.PI*2); ctx.fillStyle="#0f1626"; ctx.fill();
+  ctx.fillStyle="#cdd9ec"; ctx.font="bold 22px monospace"; ctx.textAlign="center";
+  ctx.fillText(total,cx,cy-2); ctx.font="12px sans-serif"; ctx.fillStyle="#7c8aa5";
+  ctx.fillText("命中",cx,cy+17);
   // 图例
-  let ly=cy+r+18; ctx.textAlign="left"; ctx.font="11px sans-serif";
+  let ly=cy+r+24; ctx.textAlign="left"; ctx.font="12px sans-serif";
   keys.forEach((k,i)=>{
-    const lx = cx-90 + (i%2)*100;
-    const ly2 = ly + Math.floor(i/2)*16;
-    ctx.fillStyle=CAT_HEX[catColor(k)]||"#5be38b"; ctx.fillRect(lx,ly2-9,10,10);
-    ctx.fillStyle="#cdd9ec"; ctx.fillText(`${k} ${counts[k]}`,lx+14,ly2);
+    const lx = cx-105 + (i%2)*112;
+    const ly2 = ly + Math.floor(i/2)*20;
+    ctx.fillStyle=CAT_HEX[catColor(k)]||"#5be38b"; ctx.fillRect(lx,ly2-10,12,12);
+    ctx.fillStyle="#cdd9ec"; ctx.fillText(`${k} ${counts[k]}`,lx+17,ly2);
   });
 }
 
@@ -633,10 +640,6 @@ $("sgBtn").onclick = ()=>{
   $("sgWord").value=""; $("sgRepl").value="";
 };
 
-/* 使用说明弹窗 */
-$("helpBtn").onclick = ()=> $("helpMask").classList.add("on");
-$("helpClose").onclick = ()=> $("helpMask").classList.remove("on");
-$("helpMask").addEventListener("click",(e)=>{ if(e.target===$("helpMask")) $("helpMask").classList.remove("on"); });
 
 /* 初始化 */
 refreshDictInfo();
@@ -692,5 +695,14 @@ render($("input").value);
     </ul>
   </div>
 </div>
+<script>
+/* 使用说明弹窗：元素已在上方解析完成，此处绑定才可靠（避免脚本先于弹窗解析导致事件绑定失败） */
+var hBtn=document.getElementById("helpBtn");
+var hMask=document.getElementById("helpMask");
+var hClose=document.getElementById("helpClose");
+hBtn.onclick=function(){ hMask.classList.add("on"); };
+hClose.onclick=function(){ hMask.classList.remove("on"); };
+hMask.addEventListener("click",function(e){ if(e.target===hMask || (e.target.closest && e.target.closest("#helpClose"))) hMask.classList.remove("on"); });
+</script>
 </body>
 </html>
