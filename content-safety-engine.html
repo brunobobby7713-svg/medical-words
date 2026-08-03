@@ -103,8 +103,8 @@
   footer{ text-align:center; color:var(--dim); font-size:11px; margin-top:30px; line-height:1.8; }
   @media(max-width:820px){ .grid{ grid-template-columns:1fr; } }
   .brand-bar{ display:flex; align-items:center; gap:18px; background:#05080f; border:1px solid var(--line); border-radius:14px; padding:18px 24px; margin-bottom:22px; }
-  .logo{ width:52px; height:52px; border-radius:12px; background:#0a1929; border:1px solid rgba(40,224,216,.35); display:flex; align-items:center; justify-content:center; flex:0 0 52px; }
-  .logo svg{ width:30px; height:30px; }
+  .logo{ width:72px; height:72px; border-radius:14px; background:#0a1929; border:1px solid rgba(40,224,216,.35); display:flex; align-items:center; justify-content:center; flex:0 0 72px; overflow:hidden; }
+  .logo img{ width:80px; height:80px; object-fit:contain; border-radius:10px; }
   .brand-text{ flex:1; }
   .brand-text h1{ margin:0; font-size:20px; font-weight:500; letter-spacing:.5px; }
   .brand-text p{ margin:4px 0 0; font-size:13px; color:var(--dim); }
@@ -132,10 +132,7 @@
 <header>
   <div class="brand-bar">
     <div class="logo">
-      <svg viewBox="0 0 32 32" fill="none" stroke="#28e0d8" stroke-width="2">
-        <path d="M16 6v20M10 12h12M6 16h2M24 16h2" stroke-linecap="round"/>
-        <rect x="4" y="4" width="24" height="24" rx="5" stroke="#28e0d8" stroke-opacity=".5"/>
-      </svg>
+      <img src="logo.png" alt="logo" />
     </div>
     <div class="brand-text">
       <h1>医疗大健康 · 内容合规审核引擎</h1>
@@ -181,42 +178,21 @@
   </section>
 
   <section class="card span2">
-    <h3>词库管理 <span class="pill">可导入扩充 · 支持云端/本地实时更新</span></h3>
-    <div class="dict-info" id="dictInfo"></div>
-
-    <div class="controls">
-      <input class="txt" id="urlInput" type="text" value="https://brunobobby7713-svg.github.io/medical-words/medical-words.txt" placeholder="词库文件链接：仅支持 .txt 或 .json 结尾的词库文件（如 GitHub Pages 链接），不能填小红书/公众号等网页链接" />
-      <button class="ghost" id="urlLoadBtn">从链接加载</button>
-      <label class="sw"><input type="checkbox" id="autoSync" checked /> 自动同步</label>
-      <input class="txt" id="syncInterval" type="number" value="5" style="flex:0 0 64px" />
-      <span style="color:var(--dim);font-size:12px">秒</span>
+    <h3>建议加词 <span class="pill">全员可提交 · 需管理员审核</span></h3>
+    <input type="hidden" id="urlInput" value="https://brunobobby7713-svg.github.io/medical-words/medical-words.txt" />
+    <div style="font-size:12px;color:#ff8aa6;margin-bottom:10px;line-height:1.5">⚠️ 你提交的词会进入「待审核」列表，<b>需管理员审核通过后才会合并进共享词库</b>，不会立即生效。</div>
+    <div class="controls" style="flex-wrap:wrap;gap:8px">
+      <input class="txt" id="sgWord" placeholder="要加的词，如：抗衰" style="flex:1 1 120px" />
+      <select id="sgCat" class="txt" style="flex:0 0 120px">
+        <option value="极限词">极限词</option>
+        <option value="医疗警示">医疗警示</option>
+        <option value="引流限流">引流限流</option>
+      </select>
+      <input class="txt" id="sgRepl" placeholder="替换词（可选，多个用 | 隔开，如：年轻化|抗初老）" style="flex:1 1 120px" />
+      <button class="ghost" id="sgBtn">提交建议</button>
     </div>
-    <div style="font-size:12px;color:#ff8aa6;margin:-4px 0 10px;line-height:1.5">⚠️ 此框只能填<b>词库文件链接</b>（以 <b>.txt</b> 或 <b>.json</b> 结尾），不能填小红书 / 公众号 / 网页文章链接，否则无法识别。想加词请点下方「导入粘贴词库」或编辑 GitHub 词库。</div>
-
-    <div class="controls">
-      <button class="ghost" id="fileBtn">选择本地文件</button>
-      <input id="fileInput" type="file" accept=".txt,.json" style="display:none" />
-      <button class="ghost" id="importBtn">导入粘贴词库</button>
-      <button class="ghost" id="resetBtn">恢复默认库</button>
-      <span id="importMsg" style="font-size:12px;color:var(--dim)"></span>
-    </div>
-    <div class="src" id="sourceInfo">当前词库来源：内置默认库</div>
-
-    <div style="border-top:1px dashed var(--line);margin-top:14px;padding-top:12px">
-      <div style="font-weight:600;margin-bottom:8px;color:#e6eef8">💡 全员建议加词 <span style="font-weight:400;font-size:12px;color:var(--dim)">（任何人可提交，管理员审核后合并即全员同步）</span></div>
-      <div class="controls" style="flex-wrap:wrap;gap:8px">
-        <input class="txt" id="sgWord" placeholder="要加的词，如：抗衰" style="flex:1 1 120px" />
-        <select id="sgCat" class="txt" style="flex:0 0 120px">
-          <option value="极限词">极限词</option>
-          <option value="医疗警示">医疗警示</option>
-          <option value="引流限流">引流限流</option>
-        </select>
-        <input class="txt" id="sgRepl" placeholder="替换词（可选，多个用 | 隔开，如：年轻化|抗初老）" style="flex:1 1 120px" />
-        <button class="ghost" id="sgBtn">提交建议</button>
-      </div>
-      <div style="font-size:12px;color:var(--dim);margin-top:6px">提示：替换词可填多个，用 <code>|</code> 隔开（如 <code>年轻化|抗初老</code>），合并进词库后，生成合规文案时可在下拉框任选其一。</div>
-      <div id="sgMsg" style="font-size:12px;color:var(--green);margin-top:6px"></div>
-    </div>
+    <div style="font-size:12px;color:var(--dim);margin-top:6px">提示：替换词可填多个，用 <code>|</code> 隔开（如 <code>年轻化|抗初老</code>），审核合并后，生成合规文案时可在下拉框任选其一。</div>
+    <div id="sgMsg" style="font-size:12px;color:var(--green);margin-top:6px"></div>
   </section>
 
   <section class="card span2" id="replSection">
@@ -243,7 +219,7 @@
 /* ============== 默认演示词库（合规：广告法极限词 + 医疗广告合规警示词） ============== */
 const DEFAULT_DICT = [
   // 广告法极限词
-  ["最","极限词","很"],["最佳","极限词","出色"],["第一","极限词","领先"],["全网第一","极限词","行业领先"],
+  ["最佳","极限词","出色"],["全网第一","极限词","行业领先"],
   ["国家级","极限词","专业级"],["顶级","极限词","优质"],["极品","极限词","精选"],["唯一","极限词","特色"],
   ["首选","极限词","推荐"],["王牌","极限词","主力"],["极致","极限词","深入"],["绝对","极限词","相当"],
   ["万能","极限词","多效"],["独家","极限词","自有"],["首创","极限词","开创"],["领先","极限词","前列"],
@@ -408,21 +384,14 @@ function render(text){
   for(const h of sorted){
     if(h.s<rprev) continue;
     rhtml += escapeHtml(text.slice(rprev,h.s));
-    const opts = (h.repl && h.repl.length) ? h.repl : null;
+    const opts = (h.repl && h.repl.length) ? h.repl : [];
     const key = h.s+"-"+h.e+"-"+h.w;
     rhtml += `<span class="repl-old">${escapeHtml(text.slice(h.s,h.e))}</span><span class="arrow">→</span>`;
-    if(opts){
-      if(opts.length===1){
-        rhtml += `<span class="repl">${escapeHtml(opts[0])}</span>`;
-      } else {
-        const sel = (replChoices[key]!=null) ? replChoices[key] : 0;
-        rhtml += `<select class="replSel" data-k="${key}">`;
-        opts.forEach((o,i)=>{ rhtml += `<option value="${i}"${i===sel?" selected":""}>${escapeHtml(o)}</option>`; });
-        rhtml += `</select>`;
-      }
-    } else {
-      rhtml += `<span class="repl">${"*".repeat(Math.max(1,h.e-h.s))}</span>`;
-    }
+    const sel = (replChoices[key]!=null) ? replChoices[key] : 0;
+    rhtml += `<select class="replSel" data-k="${key}">`;
+    rhtml += `<option value="-1"${sel===-1?" selected":""}>— 保留原词 —</option>`;
+    opts.forEach((o,i)=>{ rhtml += `<option value="${i}"${sel===i?" selected":""}>${escapeHtml(o)}</option>`; });
+    rhtml += `</select>`;
     rprev=h.e;
   }
   rhtml += escapeHtml(text.slice(rprev));
@@ -444,9 +413,11 @@ function genFinal(){
     if(h.s<prev) continue;
     out += text.slice(prev,h.s);
     const key = h.s+"-"+h.e+"-"+h.w;
-    const opts = (h.repl && h.repl.length) ? h.repl : null;
-    const curRepl = opts ? opts[(replChoices[key]!=null)?replChoices[key]:0]
-                         : "*".repeat(Math.max(1,h.e-h.s));
+    const opts = (h.repl && h.repl.length) ? h.repl : [];
+    let curRepl;
+    const choice = (replChoices[key]!=null)?replChoices[key]:0;
+    if(choice === -1) curRepl = text.slice(h.s, h.e);   // 保留原词，不替换
+    else curRepl = opts[choice];
     // 相邻命中且替换词相同（如「私聊发我」→「联系联系」）→ 只输出一次
     if(h.s===prev && prevRepl!==null && curRepl===prevRepl){
       // 跳过重复输出，仅推进指针
@@ -500,10 +471,7 @@ function drawPie(hits){
 }
 
 function refreshDictInfo(){
-  const cats = dfa.cats;
-  let html = `词库规模：<b>${dfa.size}</b> 条　　分类：<b>${Object.keys(cats).length}</b> 类<br/>`;
-  for(const k in cats) html += `· ${k}：<b>${cats[k]}</b> 条　`;
-  $("dictInfo").innerHTML = html;
+  // 词库统计已从普通用户界面移除；保留空函数以免调用处报错
 }
 
 /* ============== 词库来源：云端URL / 本地文件 / 自动同步 ============== */
@@ -533,7 +501,7 @@ function parseDict(text){
   return list;
 }
 let lastDictMsg = "";
-function setDictMsg(msg){ if(msg!==lastDictMsg){ $("importMsg").textContent = msg; lastDictMsg = msg; } }
+function setDictMsg(msg){ if(msg!==lastDictMsg){ const el=$("importMsg"); if(el) el.textContent = msg; lastDictMsg = msg; } }
 async function loadFromUrl(url, silent){
   if(!url){ if(!silent) $("importMsg").textContent="请先填写词库URL"; return; }
   if(!/\.(txt|json)(\?|$)/i.test(url)){
@@ -547,45 +515,26 @@ async function loadFromUrl(url, silent){
     if(!list.length) throw new Error("词库为空");
     buildWithExtra(list);
     setDictMsg(`云端词库已同步，共 ${list.length} 条`);
-    $("sourceInfo").textContent = `当前词库来源：网络链接（${url}）`;
+    const si=$("sourceInfo"); if(si) si.textContent = `当前词库来源：网络链接（${url}）`;
   }catch(e){
     if(silent) setDictMsg("云端词库暂未连通，已用内置词库（启用 GitHub Pages 后自动生效）");
     else $("importMsg").textContent = "加载失败：" + e.message + "（多为跨域/CORS限制，请换支持跨域的链接）";
   }
 }
-$("urlLoadBtn").onclick = ()=> loadFromUrl($("urlInput").value.trim());
-$("fileBtn").onclick = ()=> $("fileInput").click();
-$("fileInput").onchange = e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = ()=>{
-    let list;
-    try{ list = parseDict(String(r.result)); }
-    catch(err){ $("importMsg").textContent="解析失败：请检查格式"; return; }
-    buildWithExtra(list);
-    $("importMsg").textContent = `已加载本地文件，新增 ${list.length} 条`;
-    $("sourceInfo").textContent = `当前词库来源：本地文件（${f.name}）`;
-  };
-  r.readAsText(f);
-};
 let syncTimer = null;
 function startSync(){
   const url = $("urlInput").value.trim();
-  if(!url){ $("importMsg").textContent="请先填写词库URL再开启自动同步"; $("autoSync").checked=false; return; }
-  const sec = Math.max(5, parseInt($("syncInterval").value)||30);
+  if(!url) return;
   if(syncTimer) clearInterval(syncTimer);
-  syncTimer = setInterval(()=>loadFromUrl(url, true), sec*1000);
-  $("importMsg").textContent = `已开启自动同步（每 ${sec} 秒）`;
+  syncTimer = setInterval(()=>loadFromUrl(url, true), 5000);
 }
-function stopSync(){ if(syncTimer){ clearInterval(syncTimer); syncTimer=null; } }
-$("autoSync").onchange = ()=>{ $("autoSync").checked ? startSync() : stopSync(); };
 
 /* 集中共享词库模式：打开网站即拉取最新词库，并持续自动同步（一人维护，全员实时更新） */
 window.addEventListener('load', ()=>{
   const url = $("urlInput").value.trim();
   if(url && !url.includes("你的用户名")){
     loadFromUrl(url, true);
-    if($("autoSync").checked) startSync();
+    startSync();
   }
 });
 
@@ -614,19 +563,6 @@ $("replaceOut").addEventListener("change", e=>{
   if(sel){ replChoices[sel.dataset.k] = parseInt(sel.value,10); if($("finalOut").value) genFinal(); }
 });
 $("clearBtn").onclick = ()=>{ $("input").value=""; render(""); };
-$("resetBtn").onclick = ()=>{ dfa=new SensitiveDFA(); dfa.build(DEFAULT_DICT); refreshDictInfo(); render($("input").value); $("importMsg").textContent="已恢复默认词库"; $("sourceInfo").textContent="当前词库来源：内置默认库"; };
-
-$("importBtn").onclick = ()=>{
-  const raw=$("dictImport").value.trim();
-  if(!raw){ $("importMsg").textContent="请先粘贴词库内容"; return; }
-  let list=[];
-  try{ list=parseDict(raw); }
-  catch(e){ $("importMsg").textContent="解析失败：请检查格式"; return; }
-  dfa=new SensitiveDFA(); dfa.build(DEFAULT_DICT.concat(list));
-  refreshDictInfo(); render($("input").value);
-  $("importMsg").textContent=`导入成功，新增 ${list.length} 条`;
-};
-
 $("sgBtn").onclick = ()=>{
   const w=$("sgWord").value.trim();
   const c=$("sgCat").value;
@@ -653,10 +589,8 @@ render($("input").value);
     <p>这是一个<b>发布前自查工具</b>——把要发的文案粘进去，自动标出易踩雷的违禁词/限流词，并给出合规替换建议。无需安装，打开即用。</p>
 
     <h3>一、怎么打开</h3>
-    <p>推荐发这个短链接给任何人，打开即用：</p>
     <p><code>https://brunobobby7713-svg.github.io/medical-words/</code></p>
-    <p>也可双击本地 <code>content-safety-engine.html</code>，或把该文件发给同事。</p>
-    <p class="warn">⚠️ 真正的网站是带 <code>.html</code> 的链接，别把 <code>medical-words.txt</code>（词库数据）当网站发。</p>
+    <p class="warn">⚠️ 打不开时检查网址是否以 <code>content-safety-engine.html</code> 结尾，别把词库数据链接当成网站。</p>
 
     <h3>二、日常怎么用</h3>
     <ul>
@@ -666,31 +600,23 @@ render($("input").value);
       <li><b>高频话术演示</b>：点一下铺满引流限流词，给领导看最直观。</li>
     </ul>
 
-    <h3>三、全员建议加词（任何人可提交）</h3>
-    <p>页面「词库管理」区最下方有 <code>💡 全员建议加词</code> 表单：填词 + 选分类 + 填替换词（可选，<b>多个用 <code>|</code> 隔开</b>，如 <code>年轻化|抗初老</code>），点「提交建议」→ 自动跳到 GitHub 预填好的提交页 → 点 Submit 即可。<b>管理员审核合并后，全员 5 秒内自动更新。</b></p>
-    <p class="warn">注意：提交建议需对方有 GitHub 账号（免费）；提交是"建议"，不是免审核直接生效。</p>
+    <h3>三、建议加词（全员可提交，需管理员审核）</h3>
+    <p>页面「建议加词」区有表单：填词 + 选分类 + 填替换词（可选，<b>多个用 <code>|</code> 隔开</b>，如 <code>年轻化|抗初老</code>），点「提交建议」→ 自动跳到 GitHub 预填好的提交页 → 点 Submit 即可。<b>提交后需管理员审核通过，才会合并进共享词库，不会立即生效。</b></p>
+    <p class="warn">注意：提交建议有 GitHub 账号（免费）；提交是"建议"，不是免审核直接生效。</p>
 
-    <h3>四、怎么加词 / 改词（管理员）</h3>
-    <p>打开仓库 <code>github.com/brunobobby7713-svg/medical-words</code> → 点 <code>medical-words.txt</code> → 铅笔编辑 → 按格式改：</p>
-    <p><code>词语|分类|替换词</code>　例：<code>最|极限词|很</code>　<code>抗衰|医疗警示|年轻化</code></p>
-    <p>Commit 后全员 5 秒自动同步。<b>分类只能三选一：极限词 / 医疗警示 / 引流限流。</b>第三列替换词可省略（省略只标红不打码）。</p>
-
-    <h3>五、注意事项（必看）</h3>
+    <h3>四、注意事项（必看）</h3>
     <ul>
-      <li><b>词库 URL 框别填网页链接</b>：只能填 <code>.txt</code>/<code>.json</code> 结尾的词库地址（已内置好，一般不动）。填小红书/公众号链接会报错。</li>
-      <li><b>加词走正规入口</b>：用网站「全员建议加词」或 GitHub 编辑，别试图把笔记链接粘进 URL 框"自动抓词"（做不到）。</li>
-      <li><b>两类改动麻烦度不同</b>：改词库 <code>txt</code> → 零上传、全员自动同步；改网站功能/界面才需重传 HTML（当前功能已做齐，短期不用）。</li>
+      <li><b>词库已自动同步</b>：本工具打开即自动拉取最新词库，无需手动填链接。</li>
+      <li><b>加词走正规入口</b>：用页面「建议加词」表单提交即可。</li>
       <li><b>GitHub Pages 有延迟</b>：上传/改文件后线上约 1-5 分钟才生效，稍等再刷新。</li>
-      <li><b>建议加词是"建议制"</b>：别人提交后需你审核合并才进共享库（想免审核需另搭后端）。</li>
-      <li><b>改错了能回退</b>：GitHub 里每个文件点 <code>History</code> 可看历史、一键恢复。</li>
-      <li><b>换人接手</b>：只需把短链接发过去，对方打开即用；词库维护权限在 GitHub 仓库设置分配。</li>
+      <li><b>建议加词是"建议制"</b>：提交后需管理员审核合并，才会进共享词库，不会立即生效。</li>
     </ul>
 
-    <h3>六、合规底线</h3>
+    <h3>五、合规底线</h3>
     <ul>
       <li>本工具仅用于<b>发布前合规自检</b>，不是规避平台监管。</li>
-      <li>词库自行维护，<b>请勿添加政治类违禁词</b>。</li>
-      <li>替换词要写<b>真正合规</b>的词，别换汤不换药。</li>
+      <li>本工具聚焦医疗大健康场景，<b>请勿输入政治类违禁内容</b>。</li>
+      <li>选择替换词时，尽量选<b>真正合规</b>的表达，避免换汤不换药。</li>
       <li>标红只是提示"注意上下文"，非一刀切禁用——科普提"抗衰"没事，配上"免费领/评论区扣1"才易限流。</li>
     </ul>
   </div>
